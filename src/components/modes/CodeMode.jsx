@@ -50,7 +50,7 @@ export default function CodeMode() {
           <div className="flex flex-wrap gap-2">
             {LANGUAGES.map(l => (
               <button key={l} onClick={() => setLanguage(l)}
-                className={`tag cursor-pointer text-xs transition-all ${language === l ? 'bg-amber-500/20 border-amber-500/40 text-amber-300' : 'hover:border-amber-500/30'}`}>
+                className={`tag cursor-pointer text-xs transition-all ${language === l ? 'bg-orange-100 border-orange-400 text-orange-400' : 'hover:border-amber-500/30'}`}>
                 {l}
               </button>
             ))}
@@ -59,7 +59,7 @@ export default function CodeMode() {
           {/* Context toggle */}
           <div>
             <button onClick={() => setShowContext(!showContext)}
-              className="text-xs text-slate-500 hover:text-amber-400 transition-colors mb-2">
+              className="text-xs text-stone-400 hover:text-orange-500 transition-colors mb-2">
               {showContext ? '− Masquer' : '+ Ajouter'} le contexte du projet
             </button>
             {showContext && (
@@ -75,10 +75,10 @@ export default function CodeMode() {
 
           {/* Examples */}
           <div className="flex flex-col gap-1.5">
-            <p className="text-xs text-slate-600">Exemples :</p>
+            <p className="text-xs text-stone-300">Exemples :</p>
             {EXAMPLES.map(ex => (
               <button key={ex} onClick={() => setPrompt(ex)}
-                className="text-xs text-left text-slate-500 hover:text-amber-400 transition-colors px-1 truncate">
+                className="text-xs text-left text-stone-400 hover:text-orange-500 transition-colors px-1 truncate">
                 › {ex}
               </button>
             ))}
@@ -98,7 +98,7 @@ export default function CodeMode() {
               <Send size={15} />
             </button>
           </div>
-          <p className="text-[10px] text-slate-600">Ctrl+Entrée pour générer</p>
+          <p className="text-[10px] text-stone-300">Ctrl+Entrée pour générer</p>
         </div>
 
         <ErrorBanner error={error} onDismiss={() => setError(null)} />
@@ -112,8 +112,8 @@ export default function CodeMode() {
         {result && !loading && (
           <div className="card p-5 animate-slide-up">
             <div className="flex items-center gap-2 mb-3 pb-3 border-b border-surface-border">
-              <Terminal size={14} className="text-amber-400" />
-              <span className="text-xs font-display font-semibold text-amber-400 uppercase tracking-wider">Code Généré · {language}</span>
+              <Terminal size={14} className="text-orange-500" />
+              <span className="text-xs font-display font-semibold text-orange-500 uppercase tracking-wider">Code Généré · {language}</span>
             </div>
             <MarkdownRenderer content={result} />
           </div>

@@ -93,7 +93,7 @@ export default function TTSMode() {
       <div className="max-w-3xl mx-auto space-y-4">
         {/* AI text generator */}
         <div className="card p-4 space-y-3">
-          <p className="text-xs font-display font-semibold text-slate-400 uppercase tracking-wider">Générer un texte avec Gemini</p>
+          <p className="text-xs font-display font-semibold text-stone-500 uppercase tracking-wider">Générer un texte avec Gemini</p>
           <div className="flex gap-2">
             <input
               value={aiPrompt}
@@ -111,7 +111,7 @@ export default function TTSMode() {
 
         {/* Text area */}
         <div className="card p-4 space-y-3">
-          <p className="text-xs font-display font-semibold text-slate-400 uppercase tracking-wider">Texte à lire</p>
+          <p className="text-xs font-display font-semibold text-stone-500 uppercase tracking-wider">Texte à lire</p>
           <textarea
             value={text}
             onChange={e => setText(e.target.value)}
@@ -119,17 +119,17 @@ export default function TTSMode() {
             placeholder="Écris ou colle un texte à lire à voix haute..."
             className="input-field w-full resize-none"
           />
-          <div className="flex items-center justify-between text-xs text-slate-500">
+          <div className="flex items-center justify-between text-xs text-stone-400">
             <span>{text.length} caractères · ~{Math.ceil(text.split(' ').filter(Boolean).length / 150)} min</span>
           </div>
         </div>
 
         {/* Voice settings */}
         <div className="card p-4 space-y-4">
-          <p className="text-xs font-display font-semibold text-slate-400 uppercase tracking-wider">Paramètres voix</p>
+          <p className="text-xs font-display font-semibold text-stone-500 uppercase tracking-wider">Paramètres voix</p>
           {voices.length > 0 && (
             <div>
-              <label className="text-xs text-slate-500 block mb-1.5">Voix</label>
+              <label className="text-xs text-stone-400 block mb-1.5">Voix</label>
               <select
                 value={selectedVoice?.name || ''}
                 onChange={e => setSelectedVoice(voices.find(v => v.name === e.target.value))}
@@ -143,9 +143,9 @@ export default function TTSMode() {
           )}
           {VOICES_PRESETS.map(({ label, key, min, max, step, default: def }) => (
             <div key={key}>
-              <div className="flex justify-between text-xs text-slate-500 mb-1.5">
+              <div className="flex justify-between text-xs text-stone-400 mb-1.5">
                 <span>{label}</span>
-                <span className="font-mono text-amber-400">{settings[key].toFixed(1)}</span>
+                <span className="font-mono text-orange-500">{settings[key].toFixed(1)}</span>
               </div>
               <input
                 type="range"
@@ -183,7 +183,7 @@ export default function TTSMode() {
           {playing && (
             <div className="flex items-center gap-1.5 ml-auto">
               <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
-              <span className="text-xs text-amber-400 font-mono">{paused ? 'En pause' : 'Lecture...'}</span>
+              <span className="text-xs text-orange-500 font-mono">{paused ? 'En pause' : 'Lecture...'}</span>
             </div>
           )}
         </div>

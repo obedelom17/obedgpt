@@ -46,7 +46,7 @@ export default function VideoMode() {
     <div className="h-full overflow-y-auto p-4">
       <div className="max-w-3xl mx-auto space-y-4">
         <div className="card p-4 space-y-4">
-          <div className="p-3 rounded-xl bg-amber-500/5 border border-amber-500/15 text-xs text-amber-300/70">
+          <div className="p-3 rounded-xl bg-amber-500/5 border border-orange-200 text-xs text-orange-400/70">
             ⚠️ Les vidéos volumineuses (&gt;5MB) peuvent dépasser la limite Vercel. Pour de meilleures performances, utilise des clips courts.
           </div>
           <FileUploadZone
@@ -65,7 +65,7 @@ export default function VideoMode() {
             <div className="flex flex-wrap gap-2 mb-2">
               {PROMPTS.map(p => (
                 <button key={p} onClick={() => setPrompt(p)}
-                  className={`tag cursor-pointer text-xs transition-all ${prompt === p ? 'bg-amber-500/20 border-amber-500/40' : 'hover:border-amber-500/30'}`}>
+                  className={`tag cursor-pointer text-xs transition-all ${prompt === p ? 'bg-orange-100 border-orange-400' : 'hover:border-amber-500/30'}`}>
                   {p}
                 </button>
               ))}
@@ -87,8 +87,8 @@ export default function VideoMode() {
         {result && !loading && (
           <div className="card p-5 animate-slide-up">
             <div className="flex items-center gap-2 mb-3 pb-3 border-b border-surface-border">
-              <Video size={14} className="text-amber-400" />
-              <span className="text-xs font-display font-semibold text-amber-400 uppercase tracking-wider">Analyse Vidéo</span>
+              <Video size={14} className="text-orange-500" />
+              <span className="text-xs font-display font-semibold text-orange-500 uppercase tracking-wider">Analyse Vidéo</span>
             </div>
             <MarkdownRenderer content={result} />
           </div>

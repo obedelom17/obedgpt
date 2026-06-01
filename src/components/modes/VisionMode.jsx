@@ -71,7 +71,7 @@ export default function VisionMode() {
                 <button
                   key={p}
                   onClick={() => setPrompt(p)}
-                  className={`tag cursor-pointer transition-all text-xs ${prompt === p ? 'bg-amber-500/20 border-amber-500/40' : 'hover:border-amber-500/30'}`}
+                  className={`tag cursor-pointer transition-all text-xs ${prompt === p ? 'bg-orange-100 border-orange-400' : 'hover:border-amber-500/30'}`}
                 >
                   {p}
                 </button>
@@ -104,8 +104,8 @@ export default function VisionMode() {
         {result && !loading && (
           <div className="card p-5 animate-slide-up">
             <div className="flex items-center gap-2 mb-3 pb-3 border-b border-surface-border">
-              <Eye size={14} className="text-amber-400" />
-              <span className="text-xs font-display font-semibold text-amber-400 uppercase tracking-wider">Analyse Vision</span>
+              <Eye size={14} className="text-orange-500" />
+              <span className="text-xs font-display font-semibold text-orange-500 uppercase tracking-wider">Analyse Vision</span>
             </div>
             <MarkdownRenderer content={result} />
           </div>

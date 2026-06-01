@@ -64,7 +64,7 @@ export default function ImagineMode() {
           <div className="flex flex-wrap gap-2">
             {STYLES.map(s => (
               <button key={s} onClick={() => setStyle(s)}
-                className={`tag cursor-pointer text-xs transition-all ${style === s ? 'bg-amber-500/20 border-amber-500/40 text-amber-300' : 'hover:border-amber-500/30'}`}>
+                className={`tag cursor-pointer text-xs transition-all ${style === s ? 'bg-orange-100 border-orange-400 text-orange-400' : 'hover:border-amber-500/30'}`}>
                 {s}
               </button>
             ))}
@@ -72,10 +72,10 @@ export default function ImagineMode() {
 
           {/* Examples */}
           <div className="space-y-1">
-            <p className="text-xs text-slate-600">Idées :</p>
+            <p className="text-xs text-stone-300">Idées :</p>
             {EXAMPLES.map(ex => (
               <button key={ex} onClick={() => setPrompt(ex)}
-                className="block text-xs text-left text-slate-500 hover:text-amber-400 transition-colors px-1 w-full truncate">
+                className="block text-xs text-left text-stone-400 hover:text-orange-500 transition-colors px-1 w-full truncate">
                 › {ex}
               </button>
             ))}
@@ -121,7 +121,7 @@ export default function ImagineMode() {
               </div>
             </div>
             {text && (
-              <div className="p-3 border-t border-surface-border text-xs text-slate-400">{text}</div>
+              <div className="p-3 border-t border-surface-border text-xs text-stone-500">{text}</div>
             )}
           </div>
         )}

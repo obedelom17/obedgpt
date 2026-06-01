@@ -5,23 +5,23 @@ export default {
     extend: {
       colors: {
         navy: {
-          950: '#030712',
-          900: '#060D1F',
-          800: '#0A1628',
-          700: '#0F1F3D',
-          600: '#162947',
-          500: '#1E3A5F',
+          950: '#1C1917',
+          900: '#FFFBF7',
+          800: '#FFFFFF',
+          700: '#FFF7ED',
+          600: '#FFEDD5',
+          500: '#FED7AA',
         },
         amber: {
-          300: '#FCD34D',
-          400: '#FBBF24',
-          500: '#F59E0B',
-          600: '#D97706',
+          300: '#FB923C',
+          400: '#F97316',
+          500: '#EA580C',
+          600: '#C2410C',
         },
         surface: {
-          DEFAULT: '#0D1626',
-          raised: '#111E33',
-          border: '#1A2A44',
+          DEFAULT: '#FFF7ED',
+          raised: '#FFFFFF',
+          border: '#FDE8D0',
         }
       },
       fontFamily: {
@@ -30,27 +30,20 @@ export default {
         mono: ['"JetBrains Mono"', 'monospace'],
       },
       boxShadow: {
-        'glow-amber': '0 0 20px rgba(245, 158, 11, 0.3)',
-        'glow-sm': '0 0 10px rgba(245, 158, 11, 0.15)',
-        'card': '0 4px 24px rgba(0,0,0,0.4)',
-      },
-      backgroundImage: {
-        'gradient-radial': 'radial-gradient(var(--tw-gradient-stops))',
-        'noise': "url(\"data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E\")",
+        'glow-amber': '0 0 20px rgba(234, 88, 12, 0.25)',
+        'glow-sm':    '0 0 10px rgba(234, 88, 12, 0.12)',
+        'card':       '0 2px 16px rgba(0,0,0,0.08), 0 0 0 1px rgba(253,232,208,0.8)',
       },
       animation: {
         'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
-        'fade-in': 'fadeIn 0.3s ease-out',
-        'slide-up': 'slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1)',
-        'glow': 'glow 2s ease-in-out infinite alternate',
+        'fade-in':    'fadeIn 0.3s ease-out',
+        'slide-up':   'slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1)',
+        'glow':       'glow 2s ease-in-out infinite alternate',
       },
       keyframes: {
-        fadeIn: { from: { opacity: 0 }, to: { opacity: 1 } },
+        fadeIn:  { from: { opacity: 0 }, to: { opacity: 1 } },
         slideUp: { from: { opacity: 0, transform: 'translateY(12px)' }, to: { opacity: 1, transform: 'translateY(0)' } },
-        glow: {
-          from: { boxShadow: '0 0 10px rgba(245,158,11,0.2)' },
-          to: { boxShadow: '0 0 25px rgba(245,158,11,0.5)' }
-        }
+        glow:    { from: { boxShadow: '0 0 10px rgba(234,88,12,0.15)' }, to: { boxShadow: '0 0 25px rgba(234,88,12,0.4)' } }
       }
     },
   },

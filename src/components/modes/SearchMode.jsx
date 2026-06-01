@@ -50,7 +50,7 @@ export default function SearchMode() {
         <div className="card p-4 space-y-3">
           <div className="flex gap-2">
             <div className="relative flex-1">
-              <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
+              <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-stone-400" />
               <input
                 value={query}
                 onChange={e => setQuery(e.target.value)}
@@ -67,7 +67,7 @@ export default function SearchMode() {
           <div className="flex flex-wrap gap-2">
             {SUGGESTIONS.map(s => (
               <button key={s} onClick={() => search(s)}
-                className="tag cursor-pointer text-xs hover:border-amber-500/40 transition-all">
+                className="tag cursor-pointer text-xs hover:border-orange-400 transition-all">
                 {s}
               </button>
             ))}
@@ -85,20 +85,20 @@ export default function SearchMode() {
         {result && !loading && (
           <div className="card p-5 animate-slide-up space-y-4">
             <div className="flex items-center gap-2 pb-3 border-b border-surface-border">
-              <Globe size={14} className="text-amber-400" />
-              <span className="text-xs font-display font-semibold text-amber-400 uppercase tracking-wider">Résultats Web</span>
+              <Globe size={14} className="text-orange-500" />
+              <span className="text-xs font-display font-semibold text-orange-500 uppercase tracking-wider">Résultats Web</span>
               {sources.length > 0 && (
-                <span className="ml-auto text-xs text-slate-500">{sources.length} source{sources.length > 1 ? 's' : ''}</span>
+                <span className="ml-auto text-xs text-stone-400">{sources.length} source{sources.length > 1 ? 's' : ''}</span>
               )}
             </div>
             <MarkdownRenderer content={result} />
             {sources.length > 0 && (
               <div className="pt-3 border-t border-surface-border">
-                <p className="text-xs font-display font-semibold text-slate-500 uppercase tracking-wider mb-2">Sources</p>
+                <p className="text-xs font-display font-semibold text-stone-400 uppercase tracking-wider mb-2">Sources</p>
                 <div className="space-y-1.5">
                   {sources.map((s, i) => (
                     <a key={i} href={s.uri} target="_blank" rel="noopener noreferrer"
-                      className="flex items-center gap-2 text-xs text-slate-400 hover:text-amber-400 transition-colors p-2 rounded-lg hover:bg-navy-700/40">
+                      className="flex items-center gap-2 text-xs text-stone-500 hover:text-orange-500 transition-colors p-2 rounded-lg hover:bg-navy-700/40">
                       <ExternalLink size={11} className="flex-shrink-0" />
                       <span className="truncate">{s.title || s.uri}</span>
                     </a>
