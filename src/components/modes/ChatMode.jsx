@@ -3,12 +3,7 @@ import { Send, RotateCcw, User, Zap, Sliders } from 'lucide-react'
 import { LoadingDots, MarkdownRenderer, ErrorBanner } from '../ui'
 import { useApiCall } from '../../hooks/useApiCall'
 
-const SYSTEM_PRESETS = [
-  { label: 'Assistant général',  value: "Tu es ObedGPT, un assistant IA intelligent. Réponds dans la langue de l'utilisateur. Utilise LaTeX pour les maths : $...$ inline, $$...$$ pour les blocs." },
-  { label: 'Développeur senior', value: 'Tu es un développeur senior expert en React, Python, Java, Flutter. Donne du code production-ready avec commentaires.' },
-  { label: 'Tuteur académique',  value: "Tu es un tuteur pédagogue. Explique avec des exemples concrets. Utilise LaTeX pour les formules mathématiques." },
-  { label: 'Rédacteur pro',      value: 'Tu es un rédacteur professionnel. Textes clairs, engageants et bien structurés.' },
-]
+
 
 export default function ChatMode() {
   const [messages, setMessages]     = useState([])
