@@ -36,27 +36,7 @@ export default function ChatMode() {
   const reset = () => { setMessages([]); clearError() }
 
   return (
-    <div className="flex flex-col h-full bg-navy-900">
-      {/* System prompt */}
-      <div className="px-4 py-2 border-b border-orange-100 bg-white/60">
-        <button onClick={() => setShowSystem(!showSystem)}
-          className="flex items-center gap-2 text-xs text-stone-400 hover:text-orange-500 transition-colors">
-          <Sliders size={12} />
-          Invite système · {SYSTEM_PRESETS.find(p => p.value === systemPrompt)?.label || 'Personnalisé'}
-        </button>
-        {showSystem && (
-          <div className="mt-2 space-y-2 animate-fade-in">
-            <div className="flex flex-wrap gap-2">
-              {SYSTEM_PRESETS.map(p => (
-                <button key={p.label} onClick={() => setSystemPrompt(p.value)}
-                  className={`tag ${systemPrompt === p.value ? 'active-tag' : ''}`}>{p.label}</button>
-              ))}
-            </div>
-            <textarea value={systemPrompt} onChange={e => setSystemPrompt(e.target.value)}
-              rows={2} className="input-field text-xs w-full" placeholder="Invite système personnalisée..." />
-          </div>
-        )}
-      </div>
+  
 
       {/* Messages */}
       <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
