@@ -4,6 +4,12 @@ import { LoadingDots, MarkdownRenderer, ErrorBanner } from '../ui'
 import { useApiCall } from '../../hooks/useApiCall'
 
 
+const SYSTEM_PRESETS = [
+  { label: 'Assistant général',  value: "Tu es ObedGPT, un assistant IA intelligent. Réponds dans la langue de l'utilisateur. Utilise LaTeX pour les maths : $...$ inline, $$...$$ pour les blocs." },
+  { label: 'Développeur senior', value: 'Tu es un développeur senior expert en React, Python, Java, Flutter. Donne du code production-ready avec commentaires.' },
+  { label: 'Tuteur académique',  value: "Tu es un tuteur pédagogue. Explique avec des exemples concrets. Utilise LaTeX pour les formules mathématiques." },
+  { label: 'Rédacteur pro',      value: 'Tu es un rédacteur professionnel. Textes clairs, engageants et bien structurés.' },
+]
 
 export default function ChatMode() {
   const [messages, setMessages]     = useState([])
@@ -36,6 +42,27 @@ export default function ChatMode() {
   const reset = () => { setMessages([]); clearError() }
 
   return (
+      <div className="flex flex-col h-full bg-navy-900">
+      {/* System prompt */}
+      <div className="px-4 py-2 border-b border-orange-100 bg-white/60">
+        <button onClick={() => setShowSystem(!showSystem)}
+          className="flex items-center gap-2 text-xs text-stone-400 hover:text-orange-500 transition-colors">
+          <Sliders size={12} />
+          Invite système · {SYSTEM_PRESETS.find(p => p.value === systemPrompt)?.label || 'Personnalisé'}
+        </button>
+        {showSystem && (
+          <div className="mt-2 space-y-2 animate-fade-in">
+            <div className="flex flex-wrap gap-2">
+              {SYSTEM_PRESETS.map(p => (
+                <button key={p.label} onClick={() => setSystemPrompt(p.value)}
+                  className={`tag ${systemPrompt === p.value ? 'active-tag' : ''}`}>{p.label}</button>
+              ))}
+            </div>
+            <textarea value={systemPrompt} onChange={e => setSystemPrompt(e.target.value)}
+              rows={2} className="input-field text-xs w-full" placeholder="Invite système personnalisée..." />
+          </div>
+        )}
+      </div>
   
 
       {/* Messages */}
