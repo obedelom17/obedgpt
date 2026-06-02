@@ -43,32 +43,7 @@ export default function Settings() {
         
 
         {/* Models table */}
-        <div className="card overflow-hidden">
-          <div className="px-4 py-3 border-b border-orange-100 bg-orange-50/50">
-            <p className="text-xs font-display font-semibold text-stone-500 uppercase tracking-wider">Modèles & Limites</p>
-          </div>
-          <div className="divide-y divide-orange-50">
-            {FEATURES.map(f => (
-              <div key={f.mode} className="px-4 py-3 hover:bg-orange-50/40 transition-colors">
-                <div className="flex items-center justify-between mb-1">
-                  <span className="text-sm font-display font-semibold text-stone-800">{f.mode}</span>
-                  <span className="inline-flex items-center gap-1 text-[10px] text-emerald-600 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full font-mono">
-                    <Check size={9} strokeWidth={3} /> Gratuit
-                  </span>
-                </div>
-                <p className="text-xs text-stone-500">{f.desc}</p>
-                <div className="flex gap-3 mt-1.5">
-                  <span className="text-[10px] font-mono text-stone-400">{f.model}</span>
-                  {f.rpm && (
-                    <span className="text-[10px] font-mono text-orange-400 ml-auto">
-                      {f.rpm} req/min · {f.rpd?.toLocaleString()} req/jour
-                    </span>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
+       
 
         <p className="text-center text-xs text-stone-300 pb-4">
           ObedGPT · Elom Obed AGBEBAVI 
