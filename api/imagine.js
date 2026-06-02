@@ -9,7 +9,7 @@ module.exports = async function handler(req, res) {
     const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
     const model = genAI.getGenerativeModel({
-      model: 'gemini-2.0-flash-exp-image-generation',
+      model: 'imagen-3.0-generate-002',
     });
 
     const result = await model.generateContent({

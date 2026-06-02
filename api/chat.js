@@ -8,7 +8,7 @@ module.exports = async function handler(req, res) {
     const { messages, systemPrompt } = req.body;
     const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
     const model = genAI.getGenerativeModel({
-      model: 'gemini-2.0-flash',
+      model: 'gemini-2.5-flash',
       systemInstruction: systemPrompt || 'Tu es ObedGPT, un assistant IA intelligent, précis et utile. Tu peux répondre en français ou en anglais selon la langue de l\'utilisateur.',
     });
 
