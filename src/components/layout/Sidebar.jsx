@@ -1,30 +1,22 @@
-import {
-  MessageSquare, Eye, FileText, Mic, Video, Search, Code2,
-  Sparkles, BarChart2, Volume2, Settings, ChevronLeft, ChevronRight, Zap
-} from 'lucide-react'
+import { MessageSquare, Eye, Mic, Code2, Volume2, Settings, ChevronLeft, ChevronRight, Zap } from 'lucide-react'
 
 const ICONS = {
-  chat: MessageSquare, vision: Eye, document: FileText,
-  audio: Mic, video: Video, search: Search, code: Code2,
-  imagine: Sparkles, embed: BarChart2, tts: Volume2, settings: Settings,
+  chat: MessageSquare, vision: Eye, audio: Mic,
+  code: Code2, tts: Volume2, settings: Settings,
 }
 
 const GROUPS = [
   { label: 'Conversation', keys: ['chat', 'code'] },
-  { label: 'Multimodal',   keys: ['vision', 'document', 'audio', 'video'] },
-  { label: 'Intelligence', keys: ['search', 'imagine', 'embed', 'tts'] },
+  { label: 'Multimodal',   keys: ['vision', 'audio'] },
+  { label: 'Outils',       keys: ['tts'] },
   { label: 'Système',      keys: ['settings'] },
 ]
 
 export default function Sidebar({ modes, activeMode, setActiveMode, isOpen, setIsOpen }) {
   return (
-    <aside
-      className={`
-        relative z-20 flex flex-col border-r border-orange-100 bg-white shadow-sm
-        transition-all duration-300 ease-in-out
-        ${isOpen ? 'w-60' : 'w-[60px]'}
-        md:relative fixed h-full
-      `}
+    <aside className={`relative z-20 flex flex-col border-r border-orange-100 bg-white shadow-sm
+        transition-all duration-300 ease-in-out md:relative fixed h-full
+        ${isOpen ? 'w-60' : 'w-[60px]'}`}
     >
       {/* Logo */}
       <div className={`flex items-center gap-3 px-4 py-5 border-b border-orange-100 ${!isOpen && 'justify-center px-0'}`}>
@@ -39,7 +31,7 @@ export default function Sidebar({ modes, activeMode, setActiveMode, isOpen, setI
         )}
       </div>
 
-      {/* Navigation */}
+      {/* Nav */}
       <nav className="flex-1 overflow-y-auto py-3 px-2 space-y-4">
         {GROUPS.map(group => (
           <div key={group.label}>
@@ -53,17 +45,13 @@ export default function Sidebar({ modes, activeMode, setActiveMode, isOpen, setI
                 const Icon = ICONS[key]
                 const isActive = activeMode === key
                 return (
-                  <button
-                    key={key}
-                    onClick={() => setActiveMode(key)}
+                  <button key={key} onClick={() => setActiveMode(key)}
                     title={!isOpen ? modes[key]?.label : undefined}
                     className={`mode-btn ${isActive ? 'active' : ''} ${!isOpen ? 'justify-center px-0 w-10 h-10 mx-auto' : ''}`}
                   >
                     <Icon size={16} className="flex-shrink-0" />
                     {isOpen && <span>{modes[key]?.label}</span>}
-                    {isOpen && isActive && (
-                      <span className="ml-auto w-1.5 h-1.5 rounded-full bg-orange-500" />
-                    )}
+                    {isOpen && isActive && <span className="ml-auto w-1.5 h-1.5 rounded-full bg-orange-500" />}
                   </button>
                 )
               })}
@@ -72,9 +60,20 @@ export default function Sidebar({ modes, activeMode, setActiveMode, isOpen, setI
         ))}
       </nav>
 
-      {/* Toggle button */}
-      <button
-        onClick={() => setIsOpen(!isOpen)}
+      {/* Rate limits info */}
+      {isOpen && (
+        <div className="px-4 py-3 border-t border-orange-100">
+          <div className="text-[10px] text-stone-400 font-mono space-y-0.5">
+            <div className="flex justify-between">
+              <span>Groq Free</span>
+              <span className="text-orange-400">14 400 req/jour</span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Toggle */}
+      <button onClick={() => setIsOpen(!isOpen)}
         className="absolute -right-3 top-[72px] w-6 h-6 rounded-full bg-white border border-orange-200
                    flex items-center justify-center text-stone-400 hover:text-orange-500
                    hover:border-orange-400 transition-all duration-200 z-30 shadow-sm"

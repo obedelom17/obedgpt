@@ -1,31 +1,28 @@
-const { GoogleGenerativeAI } = require('@google/generative-ai');
+const Groq = require('groq-sdk')
 
 module.exports = async function handler(req, res) {
-  if (req.method === 'OPTIONS') return res.status(200).end();
-  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+  if (req.method === 'OPTIONS') return res.status(200).end()
+  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
 
   try {
-    const { messages, systemPrompt } = req.body;
-    const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-    const model = genAI.getGenerativeModel({
-      model: 'gemini-2.5-flash',
-      systemInstruction: systemPrompt || 'Tu es ObedGPT, un assistant IA intelligent, précis et utile. Tu peux répondre en français ou en anglais selon la langue de l\'utilisateur.',
-    });
+    const { messages, systemPrompt } = req.body
+    const groq = new Groq({ apiKey: process.env.GROQ_API_KEY })
 
-    // Build chat history (exclude last message which is the new user message)
-    const history = messages.slice(0, -1).map(m => ({
-      role: m.role === 'user' ? 'user' : 'model',
-      parts: [{ text: m.content }],
-    }));
+    const groqMessages = [
+      { role: 'system', content: systemPrompt || "Tu es ObedGPT, un assistant IA intelligent et utile. Réponds dans la langue de l'utilisateur. Pour les formules mathématiques, utilise la syntaxe LaTeX : $formule$ pour inline, $$formule$$ pour bloc." },
+      ...messages.map(m => ({ role: m.role === 'assistant' ? 'assistant' : 'user', content: m.content }))
+    ]
 
-    const chat = model.startChat({ history });
-    const lastMessage = messages[messages.length - 1];
-    const result = await chat.sendMessage(lastMessage.content);
-    const text = result.response.text();
+    const completion = await groq.chat.completions.create({
+      model: 'llama-3.3-70b-versatile',
+      messages: groqMessages,
+      temperature: 0.7,
+      max_tokens: 4096,
+    })
 
-    res.status(200).json({ text });
+    res.status(200).json({ text: completion.choices[0].message.content })
   } catch (error) {
-    console.error('Chat error:', error);
-    res.status(500).json({ error: error.message || 'Erreur serveur' });
+    console.error('Chat error:', error)
+    res.status(500).json({ error: error.message || 'Erreur serveur' })
   }
 }

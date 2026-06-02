@@ -1,25 +1,50 @@
-const { GoogleGenerativeAI } = require('@google/generative-ai');
+const Groq = require('groq-sdk')
 
 module.exports = async function handler(req, res) {
-  if (req.method === 'OPTIONS') return res.status(200).end();
-  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+  if (req.method === 'OPTIONS') return res.status(200).end()
+  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
 
   try {
-    const { prompt, audioBase64, mimeType } = req.body;
-    const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
+    const { audioBase64, mimeType, prompt } = req.body
+    const groq = new Groq({ apiKey: process.env.GROQ_API_KEY })
 
-    const audioPart = {
-      inlineData: { data: audioBase64, mimeType: mimeType || 'audio/mp3' },
-    };
+    // Convert base64 to Buffer then to File-like object
+    const buffer = Buffer.from(audioBase64, 'base64')
+    const ext = (mimeType || 'audio/mp3').split('/')[1]?.split(';')[0] || 'mp3'
+    const filename = `audio.${ext}`
 
-    const userPrompt = prompt || 'Transcris cet audio et fais-en un résumé. Identifie les sujets abordés, les personnes qui parlent (si possible), et les points importants.';
-    const result = await model.generateContent([userPrompt, audioPart]);
-    res.status(200).json({ text: result.response.text() });
+    // Groq SDK accepts a File-like object via toFile helper
+    const { toFile } = require('groq-sdk')
+    const audioFile = await toFile(buffer, filename, { type: mimeType || 'audio/mp3' })
+
+    const transcription = await groq.audio.transcriptions.create({
+      file: audioFile,
+      model: 'whisper-large-v3-turbo',
+      response_format: 'verbose_json',
+    })
+
+    // If extra analysis requested, run through LLaMA
+    const text = transcription.text
+    if (prompt && prompt !== 'Transcris cet audio et fais-en un résumé complet.') {
+      const analysis = await groq.chat.completions.create({
+        model: 'llama-3.3-70b-versatile',
+        messages: [
+          { role: 'system', content: 'Tu analyses des transcriptions audio.' },
+          { role: 'user', content: `Transcription :\n\n${text}\n\n---\n${prompt}` }
+        ],
+        max_tokens: 2048,
+      })
+      res.status(200).json({
+        text: `## Transcription\n\n${text}\n\n## Analyse\n\n${analysis.choices[0].message.content}`,
+        transcription: text,
+      })
+    } else {
+      res.status(200).json({ text, transcription: text })
+    }
   } catch (error) {
-    console.error('Audio error:', error);
-    res.status(500).json({ error: error.message || 'Erreur serveur' });
+    console.error('Audio error:', error)
+    res.status(500).json({ error: error.message || 'Erreur serveur' })
   }
 }
 
-module.exports.config = { api: { bodyParser: { sizeLimit: '10mb' } } };
+module.exports.config = { api: { bodyParser: { sizeLimit: '25mb' } } }

@@ -6,30 +6,65 @@ import rehypeRaw from 'rehype-raw'
 import rehypeKatex from 'rehype-katex'
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
 import { oneLight } from 'react-syntax-highlighter/dist/esm/styles/prism'
-import { Copy, Check, Upload, X, File, AlertTriangle, Clock, WifiOff } from 'lucide-react'
+import { Copy, Check, Upload, X, File, AlertTriangle, Clock, WifiOff, KeyRound, FileX, Cpu } from 'lucide-react'
 
-// ——— Error helpers ———
-export function parseRetryDelay(message) {
-  const match = message?.match(/retry in (\d+\.?\d*)s/i)
-  return match ? Math.ceil(parseFloat(match[1])) : 30
+// ——— Error classification (works on string OR object) ———
+export function classifyError(input) {
+  if (!input) return null
+  if (typeof input === 'object' && input.type) return input // already classified
+  const msg = String(input)
+
+  if (msg.includes('429') || msg.includes('Too Many Requests') || msg.includes('RESOURCE_EXHAUSTED')) {
+    const match = msg.match(/retry in (\d+\.?\d*)s/i)
+    return { type: '429', delay: match ? Math.ceil(parseFloat(match[1])) : 30 }
+  }
+  if (msg.includes('503') || msg.includes('Service Unavailable') || msg.includes('high demand') || msg.includes('overloaded'))
+    return { type: '503', delay: 15 }
+  if (msg.includes('401') || msg.includes('403') || msg.includes('API_KEY') || msg.includes('invalid authentication') || msg.includes('Invalid API Key'))
+    return { type: 'auth', delay: 0 }
+  if (msg.includes('413') || msg.includes('too large') || msg.includes('Request Entity Too Large'))
+    return { type: '413', delay: 0 }
+  if (msg.includes('quota') && (msg.includes('day') || msg.includes('exceeded')))
+    return { type: 'quota', delay: 0 }
+  if (msg.includes('context') || msg.includes('token_limit') || msg.includes('CONTEXT_WINDOW'))
+    return { type: 'context', delay: 0 }
+  if (msg.includes('Failed to fetch') || msg.includes('NetworkError') || msg.includes('ECONNREFUSED'))
+    return { type: 'network', delay: 5 }
+  if (msg.includes('500') || msg.includes('Internal Server Error'))
+    return { type: '500', delay: 10 }
+  if (msg.includes('400') || msg.includes('Bad Request') || msg.includes('INVALID_ARGUMENT'))
+    return { type: '400', delay: 0 }
+  if (msg.includes('unsupported') || msg.includes('format') || msg.includes('invalid file'))
+    return { type: 'format', delay: 0 }
+  return { type: 'generic', delay: 0, raw: msg }
 }
 
-export function getErrorType(message) {
-  if (!message) return 'unknown'
-  if (message.includes('429') || message.includes('Too Many Requests') || message.includes('quota')) return '429'
-  if (message.includes('503') || message.includes('Service Unavailable') || message.includes('high demand')) return '503'
-  if (message.includes('401') || message.includes('403') || message.includes('API key')) return 'auth'
-  return 'generic'
+const ERROR_CONFIG = {
+  '429':    { icon: Clock,         color: 'amber',  title: 'Quota par minute dépassé',           body: 'Patiente quelques secondes puis réessaie automatiquement.', retryable: true },
+  '503':    { icon: WifiOff,       color: 'orange', title: 'Service momentanément surchargé',    body: "Forte demande en ce moment. Réessai automatique dans quelques secondes.", retryable: true },
+  'auth':   { icon: KeyRound,      color: 'red',    title: 'Clé API invalide',                   body: 'Vérifie GROQ_API_KEY dans Vercel → Settings → Environment Variables.', retryable: false },
+  '413':    { icon: FileX,         color: 'red',    title: 'Fichier trop volumineux',            body: "Limite : ~25MB pour l'audio, ~10MB pour les images. Réduis la taille.", retryable: false },
+  'quota':  { icon: AlertTriangle, color: 'red',    title: 'Quota journalier atteint',           body: 'Limite Groq free tier atteinte. Réessaie demain ou consulte console.groq.com.', retryable: false },
+  'context':{ icon: Cpu,          color: 'amber',  title: 'Conversation trop longue',           body: 'Fenêtre de contexte dépassée. Commence une nouvelle conversation.', retryable: false },
+  'network':{ icon: WifiOff,       color: 'red',    title: 'Erreur réseau',                      body: 'Vérifie ta connexion internet et réessaie.', retryable: true },
+  '500':    { icon: AlertTriangle, color: 'red',    title: 'Erreur serveur interne',             body: 'Problème côté serveur. Réessaie dans quelques secondes.', retryable: true },
+  '400':    { icon: AlertTriangle, color: 'red',    title: 'Requête invalide',                   body: 'Le fichier ou le format est incorrect. Essaie un autre fichier.', retryable: false },
+  'format': { icon: FileX,         color: 'red',    title: 'Format non supporté',               body: 'Ce format de fichier n\'est pas accepté. Essaie JPG, PNG, MP3, WAV.', retryable: false },
+  'generic':{ icon: AlertTriangle, color: 'red',    title: 'Erreur inattendue',                  body: null, retryable: false },
+}
+
+const COLOR_CLASSES = {
+  amber:  { wrap: 'bg-amber-50 border-amber-200',   bar: 'bg-amber-500',  text: 'text-amber-800', sub: 'text-amber-600',  icon: 'text-amber-500',  btn: 'text-amber-700 hover:text-amber-900' },
+  orange: { wrap: 'bg-orange-50 border-orange-200', bar: 'bg-orange-500', text: 'text-orange-800',sub: 'text-orange-600', icon: 'text-orange-500', btn: 'text-orange-700 hover:text-orange-900' },
+  red:    { wrap: 'bg-red-50 border-red-200',       bar: 'bg-red-400',    text: 'text-red-800',   sub: 'text-red-600',    icon: 'text-red-400',    btn: 'text-red-700 hover:text-red-900' },
 }
 
 // ——— Loading dots ———
 export function LoadingDots({ label = "L'IA réfléchit..." }) {
   return (
-    <div className="flex items-center gap-3 py-2 px-1 text-stone-400 text-sm">
+    <div className="flex items-center gap-3 py-2 px-1">
       <div className="flex gap-1">
-        <span className="loading-dot w-2 h-2 rounded-full bg-orange-400 block" />
-        <span className="loading-dot w-2 h-2 rounded-full bg-orange-400 block" />
-        <span className="loading-dot w-2 h-2 rounded-full bg-orange-400 block" />
+        {[0,1,2].map(i => <span key={i} className="loading-dot w-2 h-2 rounded-full bg-orange-400 block" />)}
       </div>
       <span className="text-xs font-mono text-stone-400">{label}</span>
     </div>
@@ -40,16 +75,14 @@ export function LoadingDots({ label = "L'IA réfléchit..." }) {
 function CopyButton({ code }) {
   const [copied, setCopied] = useState(false)
   return (
-    <button
-      onClick={() => { navigator.clipboard.writeText(code); setCopied(true); setTimeout(() => setCopied(false), 2000) }}
-      className="text-stone-400 hover:text-orange-500 transition-colors"
-    >
+    <button onClick={() => { navigator.clipboard.writeText(code); setCopied(true); setTimeout(() => setCopied(false), 2000) }}
+      className="text-stone-400 hover:text-orange-500 transition-colors">
       {copied ? <Check size={13} /> : <Copy size={13} />}
     </button>
   )
 }
 
-// ——— Markdown + Math renderer ———
+// ——— Markdown + KaTeX renderer ———
 export function MarkdownRenderer({ content }) {
   return (
     <div className="prose-obedgpt">
@@ -68,24 +101,71 @@ export function MarkdownRenderer({ content }) {
                     <span>{lang || 'code'}</span>
                     <CopyButton code={code} />
                   </div>
-                  <SyntaxHighlighter
-                    style={oneLight}
-                    language={lang || 'text'}
-                    PreTag="div"
+                  <SyntaxHighlighter style={oneLight} language={lang || 'text'} PreTag="div"
                     customStyle={{ margin: 0, borderRadius: 0, background: '#FFFBF7', fontSize: '0.8rem', padding: '1rem' }}
-                    {...props}
-                  >
-                    {code}
-                  </SyntaxHighlighter>
+                    {...props}>{code}</SyntaxHighlighter>
                 </div>
               )
             }
             return <code className={className} {...props}>{children}</code>
           },
         }}
-      >
-        {content}
-      </ReactMarkdown>
+      >{content}</ReactMarkdown>
+    </div>
+  )
+}
+
+// ——— Smart Error Banner ———
+export function ErrorBanner({ error, onDismiss, onRetry }) {
+  const [countdown, setCountdown] = useState(null)
+  const [initialDelay, setInitialDelay] = useState(30)
+
+  const classified = classifyError(error)
+
+  useEffect(() => {
+    if (!classified) { setCountdown(null); return }
+    const delay = classified.delay || 0
+    if (delay > 0) {
+      setInitialDelay(delay)
+      setCountdown(delay)
+      const iv = setInterval(() => setCountdown(p => { if (p <= 1) { clearInterval(iv); return 0 } return p - 1 }), 1000)
+      return () => clearInterval(iv)
+    }
+  }, [error])
+
+  if (!classified) return null
+
+  const cfg = ERROR_CONFIG[classified.type] || ERROR_CONFIG.generic
+  const col = COLOR_CLASSES[cfg.color]
+  const Icon = cfg.icon
+  const bodyText = cfg.body || classified.raw || 'Une erreur est survenue.'
+  const showBar = countdown !== null && countdown > 0
+
+  return (
+    <div className={`flex items-start gap-3 p-3 rounded-xl text-sm border animate-fade-in ${col.wrap}`}>
+      <Icon size={15} className={`flex-shrink-0 mt-0.5 ${col.icon}`} />
+      <div className="flex-1 min-w-0">
+        <p className={`font-semibold ${col.text}`}>{cfg.title}</p>
+        <p className={`text-xs mt-0.5 ${col.sub}`}>{bodyText}</p>
+        {showBar && (
+          <div className="flex items-center gap-2 mt-2">
+            <div className="flex-1 h-1.5 bg-white/60 rounded-full overflow-hidden">
+              <div className={`h-full ${col.bar} rounded-full transition-all duration-1000`}
+                style={{ width: `${(countdown / initialDelay) * 100}%` }} />
+            </div>
+            <span className={`text-xs font-mono w-7 flex-shrink-0 ${col.sub}`}>{countdown}s</span>
+          </div>
+        )}
+        {countdown === 0 && cfg.retryable && onRetry && (
+          <button onClick={() => { onDismiss?.(); onRetry() }}
+            className={`mt-2 text-xs font-semibold underline underline-offset-2 ${col.btn}`}>
+            Réessayer maintenant →
+          </button>
+        )}
+      </div>
+      <button onClick={onDismiss} className="flex-shrink-0 text-stone-400 hover:text-stone-600 transition-colors mt-0.5">
+        <X size={14} />
+      </button>
     </div>
   )
 }
@@ -93,25 +173,19 @@ export function MarkdownRenderer({ content }) {
 // ——— File Upload Zone ———
 export function FileUploadZone({ onFile, accept, label, hint, maxSizeMB = 10, currentFile }) {
   const [dragging, setDragging] = useState(false)
-  const [error, setError] = useState(null)
+  const [err, setErr] = useState(null)
 
   const handleFile = useCallback((file) => {
-    setError(null)
+    setErr(null)
     if (!file) return
-    if (file.size / 1024 / 1024 > maxSizeMB) { setError(`Fichier trop grand (max ${maxSizeMB}MB)`); return }
+    if (file.size / 1024 / 1024 > maxSizeMB) { setErr(`Fichier trop grand (max ${maxSizeMB}MB)`); return }
     const reader = new FileReader()
-    reader.onload = (e) => {
-      const base64 = e.target.result.split(',')[1]
-      onFile({ file, base64, mimeType: file.type, name: file.name })
-    }
+    reader.onload = e => onFile({ file, base64: e.target.result.split(',')[1], mimeType: file.type, name: file.name })
+    reader.onerror = () => setErr('Impossible de lire ce fichier.')
     reader.readAsDataURL(file)
   }, [onFile, maxSizeMB])
 
-  const onDrop = useCallback((e) => {
-    e.preventDefault(); setDragging(false)
-    const file = e.dataTransfer.files[0]
-    if (file) handleFile(file)
-  }, [handleFile])
+  const onDrop = useCallback(e => { e.preventDefault(); setDragging(false); const f = e.dataTransfer.files[0]; if (f) handleFile(f) }, [handleFile])
 
   return (
     <div>
@@ -122,19 +196,13 @@ export function FileUploadZone({ onFile, accept, label, hint, maxSizeMB = 10, cu
           </div>
           <div className="flex-1 min-w-0">
             <div className="text-sm text-stone-800 truncate font-medium">{currentFile.name}</div>
-            <div className="text-xs text-stone-400 mt-0.5">{(currentFile.file.size / 1024).toFixed(0)} KB</div>
+            <div className="text-xs text-stone-400 mt-0.5">{(currentFile.file.size / 1024).toFixed(0)} KB · {currentFile.mimeType}</div>
           </div>
-          <button onClick={() => onFile(null)} className="text-stone-400 hover:text-red-400 transition-colors">
-            <X size={16} />
-          </button>
+          <button onClick={() => onFile(null)} className="text-stone-400 hover:text-red-400 transition-colors"><X size={16} /></button>
         </div>
       ) : (
-        <label
-          onDragOver={(e) => { e.preventDefault(); setDragging(true) }}
-          onDragLeave={() => setDragging(false)}
-          onDrop={onDrop}
-          className={`drop-zone flex flex-col items-center justify-center gap-2 p-8 cursor-pointer ${dragging ? 'drag-over' : ''}`}
-        >
+        <label onDragOver={e => { e.preventDefault(); setDragging(true) }} onDragLeave={() => setDragging(false)} onDrop={onDrop}
+          className={`drop-zone flex flex-col items-center justify-center gap-2 p-8 cursor-pointer ${dragging ? 'drag-over' : ''}`}>
           <div className="w-12 h-12 rounded-2xl bg-orange-50 flex items-center justify-center">
             <Upload size={20} className="text-orange-400" />
           </div>
@@ -143,7 +211,7 @@ export function FileUploadZone({ onFile, accept, label, hint, maxSizeMB = 10, cu
           <input type="file" accept={accept} onChange={e => { const f = e.target.files?.[0]; if (f) handleFile(f) }} className="hidden" />
         </label>
       )}
-      {error && <p className="text-xs text-red-500 mt-2 px-1">{error}</p>}
+      {err && <p className="text-xs text-red-500 mt-2 px-1">{err}</p>}
     </div>
   )
 }
@@ -157,113 +225,6 @@ export function EmptyState({ icon: Icon, title, description }) {
       </div>
       <div className="text-stone-600 font-display font-medium text-sm">{title}</div>
       {description && <div className="text-stone-400 text-xs max-w-xs">{description}</div>}
-    </div>
-  )
-}
-
-// ——— Smart Error Banner (429 countdown + 503 + auth) ———
-export function ErrorBanner({ error, onDismiss, onRetry }) {
-  const [countdown, setCountdown] = useState(null)
-  const [initialDelay, setInitialDelay] = useState(30)
-  const type = getErrorType(error)
-
-  useEffect(() => {
-    if (!error) { setCountdown(null); return }
-
-    if (type === '429') {
-      const delay = parseRetryDelay(error)
-      setInitialDelay(delay)
-      setCountdown(delay)
-      const interval = setInterval(() => {
-        setCountdown(prev => {
-          if (prev <= 1) { clearInterval(interval); return 0 }
-          return prev - 1
-        })
-      }, 1000)
-      return () => clearInterval(interval)
-    }
-
-    if (type === '503') {
-      // Auto-retry after 15s for 503
-      setInitialDelay(15)
-      setCountdown(15)
-      const interval = setInterval(() => {
-        setCountdown(prev => {
-          if (prev <= 1) { clearInterval(interval); return 0 }
-          return prev - 1
-        })
-      }, 1000)
-      return () => clearInterval(interval)
-    }
-  }, [error, type])
-
-  if (!error) return null
-
-  const configs = {
-    '429': {
-      bg: 'bg-amber-50 border-amber-200',
-      icon: <Clock size={15} className="text-amber-500" />,
-      title: 'Service temporairement surchargé',
-      body: 'Trop de requêtes simultanées. Réessaie dans quelques secondes.',
-      barColor: 'bg-amber-500',
-    },
-    '503': {
-      bg: 'bg-orange-50 border-orange-200',
-      icon: <WifiOff size={15} className="text-orange-500" />,
-      title: 'Service IA indisponible momentanément',
-      body: "Le modèle est en forte demande en ce moment. C'est temporaire — réessaie automatiquement.",
-      barColor: 'bg-orange-500',
-    },
-    'auth': {
-      bg: 'bg-red-50 border-red-200',
-      icon: <AlertTriangle size={15} className="text-red-400" />,
-      title: 'Clé API invalide',
-      body: "Vérifie ta clé GEMINI_API_KEY dans les variables d'environnement Vercel.",
-      barColor: null,
-    },
-    'generic': {
-      bg: 'bg-red-50 border-red-200',
-      icon: <AlertTriangle size={15} className="text-red-400" />,
-      title: 'Erreur',
-      body: error,
-      barColor: null,
-    },
-  }
-
-  const c = configs[type] || configs.generic
-  const showCountdown = (type === '429' || type === '503') && countdown !== null
-
-  return (
-    <div className={`flex items-start gap-3 p-3 rounded-xl text-sm border ${c.bg}`}>
-      <div className="flex-shrink-0 mt-0.5">{c.icon}</div>
-      <div className="flex-1 min-w-0">
-        <p className="font-semibold text-stone-800">{c.title}</p>
-        <p className="text-xs text-stone-500 mt-0.5">{c.body}</p>
-
-        {showCountdown && countdown > 0 && (
-          <div className="flex items-center gap-2 mt-2">
-            <div className="flex-1 h-1.5 bg-stone-200 rounded-full overflow-hidden">
-              <div
-                className={`h-full ${c.barColor} rounded-full transition-all duration-1000`}
-                style={{ width: `${(countdown / initialDelay) * 100}%` }}
-              />
-            </div>
-            <span className="text-xs font-mono text-stone-500 w-8 flex-shrink-0">{countdown}s</span>
-          </div>
-        )}
-
-        {showCountdown && countdown === 0 && onRetry && (
-          <button
-            onClick={() => { onDismiss?.(); onRetry() }}
-            className="mt-2 text-xs font-semibold text-orange-600 hover:text-orange-800 underline underline-offset-2"
-          >
-            Réessayer maintenant →
-          </button>
-        )}
-      </div>
-      <button onClick={onDismiss} className="flex-shrink-0 text-stone-400 hover:text-stone-600 transition-colors">
-        <X size={14} />
-      </button>
     </div>
   )
 }

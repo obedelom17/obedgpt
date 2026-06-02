@@ -1,127 +1,82 @@
 import { useState } from 'react'
 import { Code2, Send, Terminal } from 'lucide-react'
 import { LoadingDots, MarkdownRenderer, ErrorBanner, EmptyState } from '../ui'
+import { useApiCall } from '../../hooks/useApiCall'
 
-const LANGUAGES = ['JavaScript', 'TypeScript', 'Python', 'Java', 'PHP', 'React JSX', 'HTML/CSS', 'SQL', 'Bash', 'C#', 'Flutter/Dart']
-
-const EXAMPLES = [
-  'Crée un hook React pour fetcher une API avec loading/error',
-  'Écris une fonction Python pour trier une liste d\'objets',
-  'Génère une classe Java avec héritage et polymorphisme',
-  'Crée un composant Flutter avec un ListView stylisé',
-  'Écris une API REST en PHP avec authentification JWT',
+const LANGUAGES = ['JavaScript', 'TypeScript', 'Python', 'Java', 'PHP', 'React JSX', 'HTML/CSS', 'SQL', 'Bash', 'C#', 'Flutter/Dart', 'Kotlin']
+const EXAMPLES  = [
+  'Hook React pour fetcher une API avec loading/error/retry',
+  'Fonction Python pour trier une liste d\'objets par attribut',
+  'Classe Java avec héritage et interface',
+  'Composant Flutter avec ListView et pull-to-refresh',
+  'API REST PHP avec authentification JWT',
 ]
 
 export default function CodeMode() {
-  const [prompt, setPrompt] = useState('')
+  const [prompt, setPrompt]     = useState('')
   const [language, setLanguage] = useState('JavaScript')
-  const [context, setContext] = useState('')
-  const [result, setResult] = useState(null)
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState(null)
-  const [showContext, setShowContext] = useState(false)
+  const [context, setContext]   = useState('')
+  const [result, setResult]     = useState(null)
+  const [showCtx, setShowCtx]   = useState(false)
+  const { loading, error, call, retry, clearError } = useApiCall()
 
   const generate = async () => {
     if (!prompt.trim() || loading) return
-    setLoading(true)
-    setError(null)
     setResult(null)
-    try {
-      const res = await fetch('/api/code', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt, language, context }),
-      })
-      const data = await res.json()
-      if (data.error) throw new Error(data.error)
-      setResult(data.text)
-    } catch (e) {
-      setError(e.message)
-    } finally {
-      setLoading(false)
-    }
+    const data = await call('/api/code', { prompt, language, context })
+    if (data) setResult(data.text)
   }
+
+  const handleRetry = async () => { const data = await retry(); if (data) setResult(data.text) }
 
   return (
     <div className="h-full overflow-y-auto p-4">
       <div className="max-w-3xl mx-auto space-y-4">
         <div className="card p-4 space-y-3">
-          {/* Language selector */}
           <div className="flex flex-wrap gap-2">
             {LANGUAGES.map(l => (
               <button key={l} onClick={() => setLanguage(l)}
-                className={`tag cursor-pointer text-xs transition-all ${language === l ? 'bg-orange-100 border-orange-400 text-orange-400' : 'hover:border-amber-500/30'}`}>
-                {l}
-              </button>
+                className={`tag text-xs ${language === l ? 'active-tag' : ''}`}>{l}</button>
             ))}
           </div>
-
-          {/* Context toggle */}
           <div>
-            <button onClick={() => setShowContext(!showContext)}
-              className="text-xs text-stone-400 hover:text-orange-500 transition-colors mb-2">
-              {showContext ? '− Masquer' : '+ Ajouter'} le contexte du projet
+            <button onClick={() => setShowCtx(!showCtx)} className="text-xs text-stone-400 hover:text-orange-500 transition-colors mb-2">
+              {showCtx ? '− Masquer' : '+ Ajouter'} le contexte du projet
             </button>
-            {showContext && (
-              <textarea
-                value={context}
-                onChange={e => setContext(e.target.value)}
-                rows={2}
-                placeholder="Ex: Application React e-commerce avec Tailwind CSS, API REST Laravel..."
-                className="input-field text-xs w-full"
-              />
+            {showCtx && (
+              <textarea value={context} onChange={e => setContext(e.target.value)} rows={2}
+                placeholder="Ex: App React e-commerce Tailwind CSS, API Laravel..." className="input-field text-xs w-full" />
             )}
           </div>
-
-          {/* Examples */}
-          <div className="flex flex-col gap-1.5">
-            <p className="text-xs text-stone-300">Exemples :</p>
+          <div className="space-y-1">
+            <p className="text-xs text-stone-400">Exemples :</p>
             {EXAMPLES.map(ex => (
               <button key={ex} onClick={() => setPrompt(ex)}
-                className="text-xs text-left text-stone-400 hover:text-orange-500 transition-colors px-1 truncate">
-                › {ex}
-              </button>
+                className="block text-xs text-left text-stone-400 hover:text-orange-500 transition-colors px-1 w-full truncate">› {ex}</button>
             ))}
           </div>
-
-          {/* Input */}
           <div className="flex gap-2">
-            <textarea
-              value={prompt}
-              onChange={e => setPrompt(e.target.value)}
-              rows={2}
-              placeholder={`Décris le code ${language} que tu veux générer...`}
+            <textarea value={prompt} onChange={e => setPrompt(e.target.value)} rows={2}
+              placeholder={`Décris le code ${language} à générer...`}
               className="input-field flex-1 resize-none"
-              onKeyDown={e => { if (e.key === 'Enter' && e.ctrlKey) generate() }}
-            />
-            <button onClick={generate} disabled={!prompt.trim() || loading} className="btn-primary self-end">
-              <Send size={15} />
-            </button>
+              onKeyDown={e => { if (e.key === 'Enter' && e.ctrlKey) generate() }} />
+            <button onClick={generate} disabled={!prompt.trim() || loading} className="btn-primary self-end"><Send size={15} /></button>
           </div>
-          <p className="text-[10px] text-stone-300">Ctrl+Entrée pour générer</p>
+          <p className="text-[10px] text-stone-400">Ctrl+Entrée pour générer</p>
         </div>
 
-        <ErrorBanner error={error} onDismiss={() => setError(null)} />
-
-        {loading && (
-          <div className="card p-4">
-            <LoadingDots label={`Génération de code ${language}...`} />
-          </div>
-        )}
-
+        <ErrorBanner error={error} onDismiss={clearError} onRetry={handleRetry} />
+        {loading && <div className="card p-4"><LoadingDots label={`Génération ${language}...`} /></div>}
         {result && !loading && (
           <div className="card p-5 animate-slide-up">
-            <div className="flex items-center gap-2 mb-3 pb-3 border-b border-surface-border">
+            <div className="flex items-center gap-2 mb-3 pb-3 border-b border-orange-100">
               <Terminal size={14} className="text-orange-500" />
-              <span className="text-xs font-display font-semibold text-orange-500 uppercase tracking-wider">Code Généré · {language}</span>
+              <span className="text-xs font-display font-semibold text-orange-500 uppercase tracking-wider">Code · {language}</span>
             </div>
             <MarkdownRenderer content={result} />
           </div>
         )}
-
-        {!result && !loading && (
-          <EmptyState icon={Code2} title="Générateur de Code" description="Décris le code que tu veux. Gemini génère du code propre, commenté et production-ready dans le langage de ton choix." />
-        )}
+        {!result && !loading && <EmptyState icon={Code2} title="Générateur de Code" description="LLaMA 3.3 70B génère du code propre, commenté et production-ready dans le langage de ton choix." />}
       </div>
     </div>
   )
