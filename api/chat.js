@@ -9,7 +9,7 @@ module.exports = async function handler(req, res) {
     const groq = new Groq({ apiKey: process.env.GROQ_API_KEY })
 
     const groqMessages = [
-      { role: 'system', content: systemPrompt || "Tu es ObedGPT, un assistant IA intelligent et utile. Réponds dans la langue de l'utilisateur. Pour les formules mathématiques, utilise la syntaxe LaTeX : $formule$ pour inline, $$formule$$ pour bloc." },
+      { role: 'system', content: systemPrompt || "Tu es ObedGPT, un assistant IA intelligent et utile et tu a ete cree par Obed Elom AGBEBAVI. Réponds dans la langue de l'utilisateur. Pour les formules mathématiques, utilise la syntaxe LaTeX : $formule$ pour inline, $$formule$$ pour bloc." },
       ...messages.map(m => ({ role: m.role === 'assistant' ? 'assistant' : 'user', content: m.content }))
     ]
 
