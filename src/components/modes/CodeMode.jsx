@@ -6,7 +6,7 @@ import { useApiCall } from '../../hooks/useApiCall'
 const LANGUAGES = ['JavaScript', 'TypeScript', 'Python', 'Java', 'PHP', 'React JSX', 'HTML/CSS', 'SQL', 'Bash', 'C#', 'Flutter/Dart', 'Kotlin']
 const EXAMPLES  = [
   'Hook React pour fetcher une API avec loading/error/retry',
-  'Fonction Python pour trier une liste d\'objets par attribut',
+  'Function Python pour trier une liste d'objets par attribut',
   'Classe Java avec héritage et interface',
   'Composant Flutter avec ListView et pull-to-refresh',
   'API REST PHP avec authentification JWT',
@@ -41,7 +41,7 @@ export default function CodeMode() {
           </div>
           <div>
             <button onClick={() => setShowCtx(!showCtx)} className="text-xs text-stone-400 hover:text-orange-500 transition-colors mb-2">
-              {showCtx ? '− Masquer' : '+ Ajouter'} le contexte du projet
+              {showCtx ? '← Masquer' : '+ Ajouter'} le contexte du projet
             </button>
             {showCtx && (
               <textarea value={context} onChange={e => setContext(e.target.value)} rows={2}
@@ -52,7 +52,7 @@ export default function CodeMode() {
             <p className="text-xs text-stone-400">Exemples :</p>
             {EXAMPLES.map(ex => (
               <button key={ex} onClick={() => setPrompt(ex)}
-                className="block text-xs text-left text-stone-400 hover:text-orange-500 transition-colors px-1 w-full truncate">› {ex}</button>
+                className="block text-xs text-left text-stone-400 hover:text-orange-500 transition-colors px-1 w-full truncate">→ {ex}</button>
             ))}
           </div>
           <div className="flex gap-2">
@@ -69,7 +69,7 @@ export default function CodeMode() {
         {loading && <div className="card p-4"><LoadingDots label={`Génération ${language}...`} /></div>}
         {result && !loading && (
           <div className="card p-5 animate-slide-up">
-            <div className="flex items-center gap-2 mb-3 pb-3 border-b border-orange-100">
+            <div className="flex items-center gap-2 mb-3 pb-3 border-b border-orange-100 dark:border-orange-900/30">
               <Terminal size={14} className="text-orange-500" />
               <span className="text-xs font-display font-semibold text-orange-500 uppercase tracking-wider">Code · {language}</span>
             </div>

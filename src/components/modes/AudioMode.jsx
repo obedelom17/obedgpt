@@ -14,7 +14,7 @@ export default function AudioMode() {
   const analyze = async () => {
     if (!file || loading) return
     setResult(null)
-    const data = await call('/api/audio', { audioBase64: file.base64, mimeType: file.mimeType, prompt: prompt || 'Transcris cet audio.' })
+    const data = await call('/api/audio', { audioBase64: file.base64, mimeType: file.mimeType, prompt: prompt })
     if (data) setResult(data.text)
   }
 
@@ -43,17 +43,17 @@ export default function AudioMode() {
         </div>
 
         <ErrorBanner error={error} onDismiss={clearError} onRetry={handleRetry} />
-        {loading && <div className="card p-4"><LoadingDots label="Transcription en cours (Whisper)..." /></div>}
+        {loading && <div className="card p-4"><LoadingDots label="Transcription en cours..." /></div>}
         {result && !loading && (
           <div className="card p-5 animate-slide-up">
-            <div className="flex items-center gap-2 mb-3 pb-3 border-b border-orange-100">
+            <div className="flex items-center gap-2 mb-3 pb-3 border-b border-orange-100 dark:border-orange-900/30">
               <Mic size={14} className="text-orange-500" />
               <span className="text-xs font-display font-semibold text-orange-500 uppercase tracking-wider">Transcription Audio</span>
             </div>
             <MarkdownRenderer content={result} />
           </div>
         )}
-        {!file && !result && <EmptyState icon={Mic} title="Mode Audio" description="Charge un fichier audio. Whisper Large V3 transcrit avec une précision exceptionnelle en +100 langues." />}
+        {!file && !result && <EmptyState icon={Mic} title="Mode Audio" description="Charge un fichier audio. L'IA transcrit et analyse le contenu avec précision." />}
       </div>
     </div>
   )

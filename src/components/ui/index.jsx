@@ -8,10 +8,9 @@ import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
 import { oneLight } from 'react-syntax-highlighter/dist/esm/styles/prism'
 import { Copy, Check, Upload, X, File, AlertTriangle, Clock, WifiOff, KeyRound, FileX, Cpu } from 'lucide-react'
 
-// ——— Error classification (works on string OR object) ———
 export function classifyError(input) {
   if (!input) return null
-  if (typeof input === 'object' && input.type) return input // already classified
+  if (typeof input === 'object' && input.type) return input
   const msg = String(input)
 
   if (msg.includes('429') || msg.includes('Too Many Requests') || msg.includes('RESOURCE_EXHAUSTED')) {
@@ -40,16 +39,16 @@ export function classifyError(input) {
 }
 
 const ERROR_CONFIG = {
-  '429':    { icon: Clock,         color: 'amber',  title: 'Quota par minute dépassé',           body: 'Patiente quelques secondes puis réessaie automatiquement.', retryable: true },
-  '503':    { icon: WifiOff,       color: 'orange', title: 'Service momentanément surchargé',    body: "Forte demande en ce moment. Réessai automatique dans quelques secondes.", retryable: true },
-  'auth':   { icon: KeyRound,      color: 'red',    title: 'Clé API invalide',                   body: 'Vérifie GROQ_API_KEY dans Vercel → Settings → Environment Variables.', retryable: false },
+  '429':    { icon: Clock,         color: 'amber',  title: 'Quota par minute dépassé',              body: 'Patiente quelques secondes puis réessaie automatiquement.', retryable: true },
+  '503':    { icon: WifiOff,       color: 'orange', title: 'Service momentanément surchargé',    body: "Forte demande en ce moment. Réessaie automatique dans quelques secondes.", retryable: true },
+  'auth':   { icon: KeyRound,      color: 'red',    title: 'Clé API invalide',                   body: 'Vérifie GROQ_API_KEY et GEMINI_API_KEY dans Vercel → Settings → Environment Variables.', retryable: false },
   '413':    { icon: FileX,         color: 'red',    title: 'Fichier trop volumineux',            body: "Limite : ~25MB pour l'audio, ~10MB pour les images. Réduis la taille.", retryable: false },
-  'quota':  { icon: AlertTriangle, color: 'red',    title: 'Quota journalier atteint',           body: 'Limite Groq free tier atteinte. Réessaie demain ou consulte console.groq.com.', retryable: false },
-  'context':{ icon: Cpu,          color: 'amber',  title: 'Conversation trop longue',           body: 'Fenêtre de contexte dépassée. Commence une nouvelle conversation.', retryable: false },
+  'quota':  { icon: AlertTriangle, color: 'red',    title: 'Quota journalier atteint',           body: 'Limite gratuite atteinte. Réessaie demain ou consulte console.groq.com.', retryable: false },
+  'context':{ icon: Cpu,           color: 'amber',  title: 'Conversation trop longue',           body: 'Fenêtre de contexte dépassée. Commence une nouvelle conversation.', retryable: false },
   'network':{ icon: WifiOff,       color: 'red',    title: 'Erreur réseau',                      body: 'Vérifie ta connexion internet et réessaie.', retryable: true },
   '500':    { icon: AlertTriangle, color: 'red',    title: 'Erreur serveur interne',             body: 'Problème côté serveur. Réessaie dans quelques secondes.', retryable: true },
   '400':    { icon: AlertTriangle, color: 'red',    title: 'Requête invalide',                   body: 'Le fichier ou le format est incorrect. Essaie un autre fichier.', retryable: false },
-  'format': { icon: FileX,         color: 'red',    title: 'Format non supporté',               body: 'Ce format de fichier n\'est pas accepté. Essaie JPG, PNG, MP3, WAV.', retryable: false },
+  'format': { icon: FileX,         color: 'red',    title: 'Format non supporté',                body: "Ce format de fichier n'est pas accepté. Essaie JPG, PNG, MP3, WAV.", retryable: false },
   'generic':{ icon: AlertTriangle, color: 'red',    title: 'Erreur inattendue',                  body: null, retryable: false },
 }
 
@@ -59,7 +58,6 @@ const COLOR_CLASSES = {
   red:    { wrap: 'bg-red-50 border-red-200',       bar: 'bg-red-400',    text: 'text-red-800',   sub: 'text-red-600',    icon: 'text-red-400',    btn: 'text-red-700 hover:text-red-900' },
 }
 
-// ——— Loading dots ———
 export function LoadingDots({ label = "L'IA réfléchit..." }) {
   return (
     <div className="flex items-center gap-3 py-2 px-1">
@@ -71,7 +69,6 @@ export function LoadingDots({ label = "L'IA réfléchit..." }) {
   )
 }
 
-// ——— Copy button ———
 function CopyButton({ code }) {
   const [copied, setCopied] = useState(false)
   return (
@@ -82,7 +79,6 @@ function CopyButton({ code }) {
   )
 }
 
-// ——— Markdown + KaTeX renderer ———
 export function MarkdownRenderer({ content }) {
   return (
     <div className="prose-obedgpt">
@@ -93,7 +89,8 @@ export function MarkdownRenderer({ content }) {
           code({ node, inline, className, children, ...props }) {
             const match = /language-(\w+)/.exec(className || '')
             const lang = match?.[1] || ''
-            const code = String(children).replace(/\n$/, '')
+            const code = String(children).replace(/
+$/, '')
             if (!inline && (match || code.includes('\n'))) {
               return (
                 <div className="syntax-wrapper">
@@ -115,7 +112,6 @@ export function MarkdownRenderer({ content }) {
   )
 }
 
-// ——— Smart Error Banner ———
 export function ErrorBanner({ error, onDismiss, onRetry }) {
   const [countdown, setCountdown] = useState(null)
   const [initialDelay, setInitialDelay] = useState(30)
@@ -170,7 +166,6 @@ export function ErrorBanner({ error, onDismiss, onRetry }) {
   )
 }
 
-// ——— File Upload Zone ———
 export function FileUploadZone({ onFile, accept, label, hint, maxSizeMB = 10, currentFile }) {
   const [dragging, setDragging] = useState(false)
   const [err, setErr] = useState(null)
@@ -216,7 +211,6 @@ export function FileUploadZone({ onFile, accept, label, hint, maxSizeMB = 10, cu
   )
 }
 
-// ——— Empty state ———
 export function EmptyState({ icon: Icon, title, description }) {
   return (
     <div className="flex flex-col items-center justify-center gap-3 py-16 px-8 text-center">

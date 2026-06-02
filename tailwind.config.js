@@ -1,15 +1,16 @@
 /** @type {import('tailwindcss').Config} */
 export default {
+  darkMode: 'class',
   content: ['./index.html', './src/**/*.{js,jsx,ts,tsx}'],
   theme: {
     extend: {
       colors: {
         navy: {
-          950: '#1C1917',
+          950: '#0f0e0d',
           900: '#FFFBF7',
           800: '#FFFFFF',
           700: '#FFF7ED',
-          600: '#FFEDD5',
+          600: '#FFFED5',
           500: '#FED7AA',
         },
         amber: {

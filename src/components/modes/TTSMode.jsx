@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import { Volume2, Play, Pause, Square, Wand2, AlertTriangle } from 'lucide-react'
 import { LoadingDots, ErrorBanner } from '../ui'
 import { useApiCall } from '../../hooks/useApiCall'
@@ -21,9 +21,7 @@ export default function TTSMode() {
   const { loading, error, call, clearError } = useApiCall()
 
   useEffect(() => {
-    // Check browser support
     if (!window.speechSynthesis) { setTtsSupported(false); return }
-
     const load = () => {
       const v = window.speechSynthesis.getVoices()
       setVoices(v)
@@ -37,7 +35,7 @@ export default function TTSMode() {
   const generateText = async () => {
     if (!aiPrompt.trim() || loading) return
     const data = await call('/api/chat', {
-      messages: [{ role: 'user', content: `Génère un texte fluide à lire à voix haute sur : ${aiPrompt}. Environ 150 mots, sans listes ni bullets.` }],
+      messages: [{ role: 'user', content: `Génère un texte fluide à lire à voix haute sur : ${aiPrompt}. Environ 150 mots, sans listes ni bulletins.` }],
       systemPrompt: 'Tu génères des textes optimisés pour la lecture à voix haute. Phrases bien construites, naturelles et engageantes.',
     })
     if (data) setText(data.text)
@@ -48,12 +46,12 @@ export default function TTSMode() {
     window.speechSynthesis.cancel()
     const utt = new SpeechSynthesisUtterance(text)
     if (voice) utt.voice = voice
-    utt.rate   = settings.rate
-    utt.pitch  = settings.pitch
-    utt.volume = settings.volume
+    utt.rate    = settings.rate
+    utt.pitch   = settings.pitch
+    utt.volume  = settings.volume
     utt.onstart = () => { setPlaying(true); setPaused(false) }
     utt.onend   = () => { setPlaying(false); setPaused(false) }
-    utt.onerror = e => { setPlaying(false); setPaused(false) }
+    utt.onerror = () => { setPlaying(false); setPaused(false) }
     window.speechSynthesis.speak(utt)
   }
 
@@ -69,7 +67,7 @@ export default function TTSMode() {
       <div className="h-full flex items-center justify-center p-8">
         <div className="card p-8 text-center max-w-sm">
           <AlertTriangle size={32} className="text-amber-400 mx-auto mb-3" />
-          <h3 className="font-display font-semibold text-stone-800 mb-2">Navigateur non supporté</h3>
+          <h3 className="font-display font-semibold text-stone-800 dark:text-stone-100 mb-2">Navigateur non supporté</h3>
           <p className="text-sm text-stone-500">La synthèse vocale nécessite un navigateur moderne (Chrome, Edge, Safari, Firefox).</p>
         </div>
       </div>
@@ -82,7 +80,7 @@ export default function TTSMode() {
 
         {/* AI text generator */}
         <div className="card p-4 space-y-3">
-          <p className="text-xs font-display font-semibold text-stone-500 uppercase tracking-wider">Générer un texte avec l'IA</p>
+          <p className="text-xs font-display font-semibold text-stone-500 dark:text-stone-400 uppercase tracking-wider">Générer un texte avec l'IA</p>
           <div className="flex gap-2">
             <input value={aiPrompt} onChange={e => setAiPrompt(e.target.value)}
               placeholder="Sujet... (ex: l'histoire de l'Afrique de l'Ouest)"
@@ -96,19 +94,19 @@ export default function TTSMode() {
 
         {/* Text area */}
         <div className="card p-4 space-y-3">
-          <p className="text-xs font-display font-semibold text-stone-500 uppercase tracking-wider">Texte à lire</p>
+          <p className="text-xs font-display font-semibold text-stone-500 dark:text-stone-400 uppercase tracking-wider">Texte à lire</p>
           <textarea value={text} onChange={e => setText(e.target.value)} rows={6}
             placeholder="Écris ou génère un texte à lire à voix haute..."
             className="input-field w-full resize-none" />
-          <p className="text-xs text-stone-400">{text.split(' ').filter(Boolean).length} mots · ~{Math.ceil(text.split(' ').filter(Boolean).length / 150)} min</p>
+          <p className="text-xs text-stone-400">{text.split(' ').filter(Boolean).length} mots · {Math.ceil(text.split(' ').filter(Boolean).length / 150)} min</p>
         </div>
 
         {/* Voice settings */}
         <div className="card p-4 space-y-4">
-          <p className="text-xs font-display font-semibold text-stone-500 uppercase tracking-wider">Paramètres voix</p>
+          <p className="text-xs font-display font-semibold text-stone-500 dark:text-stone-400 uppercase tracking-wider">Paramètres voix</p>
           {voices.length > 0 && (
             <div>
-              <label className="text-xs text-stone-500 block mb-1.5">Voix</label>
+              <label className="text-xs text-stone-500 dark:text-stone-400 block mb-1.5">Voix</label>
               <select value={voice?.name || ''} onChange={e => setVoice(voices.find(v => v.name === e.target.value))}
                 className="input-field text-xs">
                 {voices.map(v => <option key={v.name} value={v.name}>{v.name} ({v.lang})</option>)}
