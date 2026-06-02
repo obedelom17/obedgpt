@@ -40,23 +40,7 @@ export default function Settings() {
         </div>
 
         {/* API Key */}
-        <div className="card p-4">
-          <div className="flex items-start gap-3">
-            <Info size={16} className="text-orange-500 flex-shrink-0 mt-0.5" />
-            <div className="space-y-2 w-full">
-              <p className="text-sm font-medium text-stone-800">Configuration clé API</p>
-              <div className="text-xs font-mono bg-stone-50 border border-stone-200 p-3 rounded-xl text-stone-400">
-                <p># Vercel → Settings → Environment Variables</p>
-                <p>GROQ_API_KEY=<span className="text-orange-500">ta_clé_groq_ici</span></p>
-              </div>
-              <a href="https://console.groq.com/keys" target="_blank" rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 text-xs text-orange-500 hover:text-orange-700 transition-colors">
-                <ExternalLink size={11} />
-                Obtenir une clé API sur console.groq.com
-              </a>
-            </div>
-          </div>
-        </div>
+        
 
         {/* Models table */}
         <div className="card overflow-hidden">
