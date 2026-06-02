@@ -89,8 +89,7 @@ export function MarkdownRenderer({ content }) {
           code({ node, inline, className, children, ...props }) {
             const match = /language-(\w+)/.exec(className || '')
             const lang = match?.[1] || ''
-            const code = String(children).replace(/
-$/, '')
+            const code = String(children).replace(/\n$/, '')
             if (!inline && (match || code.includes('\n'))) {
               return (
                 <div className="syntax-wrapper">

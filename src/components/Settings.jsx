@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Settings as SettingsIcon, Sun, Moon, Zap, Trash2, User } from 'lucide-react'
-import { useTheme } from '../../hooks/useTheme.jsx'
-import { useApp } from '../../App'
+import { useTheme } from '../hooks/useTheme.jsx'
+import { useApp } from '../App'
 
 const FEATURES = [
   { mode: 'Chat',           model: 'LLaMA 3.3 70B / Gemini 2.5 Flash', desc: 'Conversation multi-tour, raisonnement avancé, LaTeX', rpm: 'SmartRouter', rpd: 'Auto-failover' },

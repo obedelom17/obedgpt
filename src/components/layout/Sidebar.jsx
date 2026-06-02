@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { MessageSquare, Eye, Mic, Code2, Volume2, Settings, ChevronLeft, ChevronRight, Zap, Plus, MessageCircle, Trash2, Edit2, Clock, Flame, X } from 'lucide-react'
-import { useApp } from '../App'
+import { useApp } from '../../App'
 
 const ICONS = {
   chat: MessageSquare, vision: Eye, audio: Mic,

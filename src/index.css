@@ -49,86 +49,205 @@
   }
 
   .mode-btn {
-    @apply flex items-center gap-3 w-full px-3 py-2.5 rounded-xl text-sm font-body font-medium
-           text-stone-500 transition-all duration-200 hover:text-orange-600 hover:bg-orange-50 cursor-pointer;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    width: 100%;
+    padding: 0.625rem 0.75rem;
+    border-radius: 0.75rem;
+    font-size: 0.875rem;
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 500;
+    color: #78716c;
+    transition: all 0.2s;
+    cursor: pointer;
     min-height: 44px;
   }
+  .mode-btn:hover {
+    color: #ea580c;
+    background-color: #fff7ed;
+  }
   html.dark .mode-btn {
-    @apply text-stone-400 hover:text-orange-400 hover:bg-orange-900/20;
+    color: #a8a29e;
+  }
+  html.dark .mode-btn:hover {
+    color: #fb923c;
+    background-color: rgba(124, 45, 18, 0.2);
   }
   .mode-btn.active {
-    @apply text-orange-600 bg-orange-50 border border-orange-200;
+    color: #ea580c;
+    background-color: #fff7ed;
+    border: 1px solid #fed7aa;
   }
   html.dark .mode-btn.active {
-    @apply text-orange-400 bg-orange-900/20 border-orange-800;
+    color: #fb923c;
+    background-color: rgba(124, 45, 18, 0.2);
+    border-color: rgba(124, 45, 18, 0.5);
   }
 
   .input-field {
-    @apply w-full bg-white border border-orange-200 rounded-xl px-3 md:px-4 py-2.5 md:py-3
-           text-sm text-stone-800 placeholder-stone-400 outline-none
-           focus:border-orange-400 focus:ring-2 focus:ring-orange-100
-           transition-all duration-200 font-body shadow-sm;
+    width: 100%;
+    background-color: white;
+    border: 1px solid #fed7aa;
+    border-radius: 0.75rem;
+    padding: 0.625rem 0.75rem;
+    font-size: 0.875rem;
+    color: #292524;
+    outline: none;
+    transition: all 0.2s;
+    font-family: 'DM Sans', sans-serif;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+  }
+  .input-field::placeholder {
+    color: #a8a29e;
+  }
+  .input-field:focus {
+    border-color: #fb923c;
+    box-shadow: 0 0 0 2px rgba(251, 146, 60, 0.1);
   }
   html.dark .input-field {
-    @apply bg-navy-800 border-orange-900/40 text-stone-200 placeholder-stone-600
-           focus:border-orange-700 focus:ring-orange-900/30;
+    background-color: #1c1917;
+    border-color: rgba(124, 45, 18, 0.4);
+    color: #e7e5e4;
+  }
+  html.dark .input-field::placeholder {
+    color: #57534e;
+  }
+  html.dark .input-field:focus {
+    border-color: rgba(251, 146, 60, 0.5);
+    box-shadow: 0 0 0 2px rgba(124, 45, 18, 0.3);
   }
 
   .btn-primary {
-    @apply inline-flex items-center gap-2 px-4 md:px-5 py-2 md:py-2.5 rounded-xl text-sm font-display font-semibold
-           bg-orange-500 text-white hover:bg-orange-600 active:bg-orange-700
-           transition-all duration-150 disabled:opacity-40 disabled:cursor-not-allowed
-           shadow-glow-sm hover:shadow-glow-amber;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    border-radius: 0.75rem;
+    font-size: 0.875rem;
+    font-family: 'Syne', sans-serif;
+    font-weight: 600;
+    background-color: #f97316;
+    color: white;
+    transition: all 0.15s;
     min-height: 40px;
     touch-action: manipulation;
+    border: none;
+    cursor: pointer;
+    box-shadow: 0 0 10px rgba(234, 88, 12, 0.12);
+  }
+  .btn-primary:hover {
+    background-color: #ea580c;
+    box-shadow: 0 0 20px rgba(234, 88, 12, 0.25);
+  }
+  .btn-primary:active {
+    background-color: #c2410c;
+  }
+  .btn-primary:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
   }
 
   .btn-ghost {
-    @apply inline-flex items-center gap-2 px-3 md:px-4 py-2 rounded-xl text-sm font-medium
-           text-stone-500 hover:text-orange-600 hover:bg-orange-50
-           transition-all duration-150 cursor-pointer border border-transparent
-           hover:border-orange-200;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 0.75rem;
+    border-radius: 0.75rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: #78716c;
+    transition: all 0.15s;
+    cursor: pointer;
+    border: 1px solid transparent;
     min-height: 40px;
     touch-action: manipulation;
+    background: transparent;
+  }
+  .btn-ghost:hover {
+    color: #ea580c;
+    background-color: #fff7ed;
+    border-color: #fed7aa;
   }
   html.dark .btn-ghost {
-    @apply text-stone-400 hover:text-orange-400 hover:bg-orange-900/20 hover:border-orange-900/40;
+    color: #a8a29e;
+  }
+  html.dark .btn-ghost:hover {
+    color: #fb923c;
+    background-color: rgba(124, 45, 18, 0.2);
+    border-color: rgba(124, 45, 18, 0.4);
   }
 
   .card {
-    @apply bg-white border border-orange-100 rounded-2xl shadow-card;
+    background-color: white;
+    border: 1px solid #fed7aa;
+    border-radius: 1rem;
+    box-shadow: 0 2px 16px rgba(0,0,0,0.08), 0 0 0 1px rgba(253,232,208,0.8);
   }
   html.dark .card {
-    @apply bg-navy-800 border-orange-900/30;
+    background-color: #1c1917;
+    border-color: rgba(124, 45, 18, 0.3);
   }
 
   .message-user {
-    @apply bg-orange-50 border border-orange-200 rounded-2xl rounded-tr-sm px-3 md:px-4 py-2.5 md:py-3;
+    background-color: #fff7ed;
+    border: 1px solid #fed7aa;
+    border-radius: 1rem;
+    border-top-right-radius: 0.25rem;
+    padding: 0.625rem 0.75rem;
   }
   html.dark .message-user {
-    @apply bg-orange-900/30 border-orange-800;
+    background-color: rgba(124, 45, 18, 0.3);
+    border-color: rgba(124, 45, 18, 0.5);
   }
   .message-ai {
-    @apply bg-white border border-orange-100 rounded-2xl rounded-tl-sm px-3 md:px-4 py-2.5 md:py-3 shadow-sm;
+    background-color: white;
+    border: 1px solid #fed7aa;
+    border-radius: 1rem;
+    border-top-left-radius: 0.25rem;
+    padding: 0.625rem 0.75rem;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.05);
   }
   html.dark .message-ai {
-    @apply bg-navy-800 border-orange-900/30;
+    background-color: #1c1917;
+    border-color: rgba(124, 45, 18, 0.3);
   }
 
   .tag {
-    @apply inline-flex items-center gap-1.5 px-2 py-1 rounded-lg text-xs font-mono
-           bg-orange-50 text-orange-600 border border-orange-200 cursor-pointer
-           hover:bg-orange-100 transition-all;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.5rem;
+    font-size: 0.75rem;
+    font-family: 'JetBrains Mono', monospace;
+    background-color: #fff7ed;
+    color: #ea580c;
+    border: 1px solid #fed7aa;
+    cursor: pointer;
+    transition: all 0.2s;
     min-height: 28px;
   }
+  .tag:hover {
+    background-color: #ffedd5;
+  }
   html.dark .tag {
-    @apply bg-orange-900/20 text-orange-400 border-orange-900/40 hover:bg-orange-900/30;
+    background-color: rgba(124, 45, 18, 0.2);
+    color: #fb923c;
+    border-color: rgba(124, 45, 18, 0.4);
+  }
+  html.dark .tag:hover {
+    background-color: rgba(124, 45, 18, 0.3);
   }
   .tag.active-tag {
-    @apply bg-orange-100 border-orange-400 text-orange-700;
+    background-color: #ffedd5;
+    border-color: #fb923c;
+    color: #c2410c;
   }
   html.dark .tag.active-tag {
-    @apply bg-orange-900/40 border-orange-700 text-orange-300;
+    background-color: rgba(124, 45, 18, 0.4);
+    border-color: rgba(251, 146, 60, 0.5);
+    color: #fdba74;
   }
 }
 
