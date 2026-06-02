@@ -6,7 +6,7 @@ import { useApiCall } from '../../hooks/useApiCall'
 const LANGUAGES = ['JavaScript', 'TypeScript', 'Python', 'Java', 'PHP', 'React JSX', 'HTML/CSS', 'SQL', 'Bash', 'C#', 'Flutter/Dart', 'Kotlin']
 const EXAMPLES  = [
   'Hook React pour fetcher une API avec loading/error/retry',
-  "Function Python pour trier une liste d\'objets par attribut",
+  "Function Python pour trier une liste d'objets par attribut",
   'Classe Java avec héritage et interface',
   'Composant Flutter avec ListView et pull-to-refresh',
   'API REST PHP avec authentification JWT',

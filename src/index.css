@@ -19,23 +19,6 @@
     color: #e7e5e4;
   }
 
-  .text-slate-50,
-  .text-slate-100 { color: #1C1917 !important; }
-  .text-slate-200 { color: #292524 !important; }
-  .text-slate-300 { color: #44403C !important; }
-  .text-slate-400 { color: #57534E !important; }
-  .text-slate-500 { color: #78716C !important; }
-  .text-slate-600 { color: #A8A29E !important; }
-
-  html.dark .text-stone-800 { color: #e7e5e4 !important; }
-  html.dark .text-stone-700 { color: #d6d3d1 !important; }
-  html.dark .text-stone-600 { color: #a8a29e !important; }
-  html.dark .text-stone-500 { color: #78716c !important; }
-  html.dark .text-stone-400 { color: #57534e !important; }
-  html.dark .text-stone-300 { color: #44403c !important; }
-  html.dark .text-stone-200 { color: #292524 !important; }
-  html.dark .text-stone-100 { color: #1c1917 !important; }
-
   ::-webkit-scrollbar       { width: 4px; height: 4px; }
   ::-webkit-scrollbar-track { background: transparent; }
   ::-webkit-scrollbar-thumb { background: #FED7AA; border-radius: 2px; }
@@ -161,14 +144,10 @@
   .syntax-wrapper { margin: 0.5em 0; }
   .syntax-header { padding: 0.35rem 0.75rem; font-size: 0.7rem; }
 
-  /* Better touch targets */
   button, [role="button"] { min-height: 36px; }
-
-  /* Prevent zoom on input focus (iOS) */
   input, textarea, select { font-size: 16px; }
 }
 
-/* Safe area for notched phones */
 @supports (padding: max(0px)) {
   .safe-bottom { padding-bottom: max(1rem, env(safe-area-inset-bottom)); }
 }
