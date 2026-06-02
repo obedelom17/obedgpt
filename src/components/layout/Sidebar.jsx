@@ -61,16 +61,7 @@ export default function Sidebar({ modes, activeMode, setActiveMode, isOpen, setI
       </nav>
 
       {/* Rate limits info */}
-      {isOpen && (
-        <div className="px-4 py-3 border-t border-orange-100">
-          <div className="text-[10px] text-stone-400 font-mono space-y-0.5">
-            <div className="flex justify-between">
-              <span>Groq Free</span>
-              <span className="text-orange-400">14 400 req/jour</span>
-            </div>
-          </div>
-        </div>
-      )}
+      
 
       {/* Toggle */}
       <button onClick={() => setIsOpen(!isOpen)}
