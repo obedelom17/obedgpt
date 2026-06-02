@@ -21,7 +21,7 @@ export default function Settings() {
             </div>
             <div>
               <h2 className="font-display font-bold text-stone-800">ObedGPT</h2>
-              <p className="text-xs text-stone-400">Propulsé par Groq · Gratuit</p>
+              <p className="text-xs text-stone-400">Créé par Obed Elom AGBEBAVI · Gratuit</p>
             </div>
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
@@ -71,7 +71,7 @@ export default function Settings() {
         </div>
 
         <p className="text-center text-xs text-stone-300 pb-4">
-          ObedGPT · Elom Obed AGBEBAVI · Groq Free Tier
+          ObedGPT · Elom Obed AGBEBAVI 
         </p>
       </div>
     </div>
