@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Settings as SettingsIcon, Sun, Moon, Zap, Trash2, User } from 'lucide-react'
-import { useTheme } from '../../hooks/useTheme'
+import { useTheme } from '../../hooks/useTheme.jsx'
 import { useApp } from '../../App'
 
 const FEATURES = [

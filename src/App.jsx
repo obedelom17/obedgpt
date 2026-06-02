@@ -1,5 +1,5 @@
 import { useState, useEffect, createContext, useContext } from 'react'
-import { ThemeProvider } from './hooks/useTheme'
+import { ThemeProvider } from './hooks/useTheme.jsx'
 import { useChatHistory } from './hooks/useChatHistory'
 import Sidebar from './components/layout/Sidebar'
 import Header from './components/layout/Header'

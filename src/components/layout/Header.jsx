@@ -1,5 +1,5 @@
 import { Menu, Sun, Moon, Flame } from 'lucide-react'
-import { useTheme } from '../../hooks/useTheme'
+import { useTheme } from '../../hooks/useTheme.jsx'
 import { useApp } from '../../App'
 
 export default function Header({ mode, sidebarOpen, setSidebarOpen }) {
