@@ -1,19 +1,25 @@
 import { useState, useCallback, useEffect } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
+import remarkMath from 'remark-math'
 import rehypeRaw from 'rehype-raw'
+import rehypeKatex from 'rehype-katex'
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
 import { oneLight } from 'react-syntax-highlighter/dist/esm/styles/prism'
-import { Copy, Check, Upload, X, File, AlertTriangle, Clock } from 'lucide-react'
+import { Copy, Check, Upload, X, File, AlertTriangle, Clock, WifiOff } from 'lucide-react'
 
-// ——— Parse retry delay from 429 error ———
+// ——— Error helpers ———
 export function parseRetryDelay(message) {
   const match = message?.match(/retry in (\d+\.?\d*)s/i)
   return match ? Math.ceil(parseFloat(match[1])) : 30
 }
 
-export function is429(message) {
-  return message?.includes('429') || message?.includes('Too Many Requests') || message?.includes('quota')
+export function getErrorType(message) {
+  if (!message) return 'unknown'
+  if (message.includes('429') || message.includes('Too Many Requests') || message.includes('quota')) return '429'
+  if (message.includes('503') || message.includes('Service Unavailable') || message.includes('high demand')) return '503'
+  if (message.includes('401') || message.includes('403') || message.includes('API key')) return 'auth'
+  return 'generic'
 }
 
 // ——— Loading dots ———
@@ -34,20 +40,22 @@ export function LoadingDots({ label = "L'IA réfléchit..." }) {
 function CopyButton({ code }) {
   const [copied, setCopied] = useState(false)
   return (
-    <button onClick={() => { navigator.clipboard.writeText(code); setCopied(true); setTimeout(() => setCopied(false), 2000) }}
-      className="text-stone-400 hover:text-orange-500 transition-colors">
+    <button
+      onClick={() => { navigator.clipboard.writeText(code); setCopied(true); setTimeout(() => setCopied(false), 2000) }}
+      className="text-stone-400 hover:text-orange-500 transition-colors"
+    >
       {copied ? <Check size={13} /> : <Copy size={13} />}
     </button>
   )
 }
 
-// ——— Markdown renderer ———
+// ——— Markdown + Math renderer ———
 export function MarkdownRenderer({ content }) {
   return (
     <div className="prose-obedgpt">
       <ReactMarkdown
-        remarkPlugins={[remarkGfm]}
-        rehypePlugins={[rehypeRaw]}
+        remarkPlugins={[remarkGfm, remarkMath]}
+        rehypePlugins={[rehypeRaw, rehypeKatex]}
         components={{
           code({ node, inline, className, children, ...props }) {
             const match = /language-(\w+)/.exec(className || '')
@@ -153,14 +161,18 @@ export function EmptyState({ icon: Icon, title, description }) {
   )
 }
 
-// ——— Smart Error Banner (handles 429 with countdown) ———
+// ——— Smart Error Banner (429 countdown + 503 + auth) ———
 export function ErrorBanner({ error, onDismiss, onRetry }) {
   const [countdown, setCountdown] = useState(null)
+  const [initialDelay, setInitialDelay] = useState(30)
+  const type = getErrorType(error)
 
   useEffect(() => {
     if (!error) { setCountdown(null); return }
-    if (is429(error)) {
+
+    if (type === '429') {
       const delay = parseRetryDelay(error)
+      setInitialDelay(delay)
       setCountdown(delay)
       const interval = setInterval(() => {
         setCountdown(prev => {
@@ -170,51 +182,86 @@ export function ErrorBanner({ error, onDismiss, onRetry }) {
       }, 1000)
       return () => clearInterval(interval)
     }
-  }, [error])
+
+    if (type === '503') {
+      // Auto-retry after 15s for 503
+      setInitialDelay(15)
+      setCountdown(15)
+      const interval = setInterval(() => {
+        setCountdown(prev => {
+          if (prev <= 1) { clearInterval(interval); return 0 }
+          return prev - 1
+        })
+      }, 1000)
+      return () => clearInterval(interval)
+    }
+  }, [error, type])
 
   if (!error) return null
 
-  const isRateLimit = is429(error)
+  const configs = {
+    '429': {
+      bg: 'bg-amber-50 border-amber-200',
+      icon: <Clock size={15} className="text-amber-500" />,
+      title: 'Service temporairement surchargé',
+      body: 'Trop de requêtes simultanées. Réessaie dans quelques secondes.',
+      barColor: 'bg-amber-500',
+    },
+    '503': {
+      bg: 'bg-orange-50 border-orange-200',
+      icon: <WifiOff size={15} className="text-orange-500" />,
+      title: 'Service IA indisponible momentanément',
+      body: "Le modèle est en forte demande en ce moment. C'est temporaire — réessaie automatiquement.",
+      barColor: 'bg-orange-500',
+    },
+    'auth': {
+      bg: 'bg-red-50 border-red-200',
+      icon: <AlertTriangle size={15} className="text-red-400" />,
+      title: 'Clé API invalide',
+      body: "Vérifie ta clé GEMINI_API_KEY dans les variables d'environnement Vercel.",
+      barColor: null,
+    },
+    'generic': {
+      bg: 'bg-red-50 border-red-200',
+      icon: <AlertTriangle size={15} className="text-red-400" />,
+      title: 'Erreur',
+      body: error,
+      barColor: null,
+    },
+  }
+
+  const c = configs[type] || configs.generic
+  const showCountdown = (type === '429' || type === '503') && countdown !== null
 
   return (
-    <div className={`flex items-start gap-3 p-3 rounded-xl text-sm border
-      ${isRateLimit
-        ? 'bg-amber-50 border-amber-200 text-amber-800'
-        : 'bg-red-50 border-red-200 text-red-700'
-      }`}
-    >
-      <div className="flex-shrink-0 mt-0.5">
-        {isRateLimit ? <Clock size={15} className="text-amber-500" /> : <AlertTriangle size={15} className="text-red-400" />}
-      </div>
+    <div className={`flex items-start gap-3 p-3 rounded-xl text-sm border ${c.bg}`}>
+      <div className="flex-shrink-0 mt-0.5">{c.icon}</div>
       <div className="flex-1 min-w-0">
-        {isRateLimit ? (
-          <>
-            <p className="font-medium text-amber-800">Service temporairement surchargé</p>
-            <p className="text-xs text-amber-600 mt-0.5">
-              Trop de requêtes en même temps. L'IA sera disponible dans quelques instants.
-            </p>
-            {countdown !== null && countdown > 0 && (
-              <div className="flex items-center gap-2 mt-2">
-                <div className="flex-1 h-1.5 bg-amber-200 rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-amber-500 rounded-full transition-all duration-1000"
-                    style={{ width: `${(countdown / parseRetryDelay(error)) * 100}%` }}
-                  />
-                </div>
-                <span className="text-xs font-mono text-amber-700 w-8">{countdown}s</span>
-              </div>
-            )}
-            {countdown === 0 && onRetry && (
-              <button onClick={onRetry} className="mt-2 text-xs font-semibold text-amber-700 hover:text-amber-900 underline">
-                Réessayer maintenant →
-              </button>
-            )}
-          </>
-        ) : (
-          <p>{error}</p>
+        <p className="font-semibold text-stone-800">{c.title}</p>
+        <p className="text-xs text-stone-500 mt-0.5">{c.body}</p>
+
+        {showCountdown && countdown > 0 && (
+          <div className="flex items-center gap-2 mt-2">
+            <div className="flex-1 h-1.5 bg-stone-200 rounded-full overflow-hidden">
+              <div
+                className={`h-full ${c.barColor} rounded-full transition-all duration-1000`}
+                style={{ width: `${(countdown / initialDelay) * 100}%` }}
+              />
+            </div>
+            <span className="text-xs font-mono text-stone-500 w-8 flex-shrink-0">{countdown}s</span>
+          </div>
+        )}
+
+        {showCountdown && countdown === 0 && onRetry && (
+          <button
+            onClick={() => { onDismiss?.(); onRetry() }}
+            className="mt-2 text-xs font-semibold text-orange-600 hover:text-orange-800 underline underline-offset-2"
+          >
+            Réessayer maintenant →
+          </button>
         )}
       </div>
-      <button onClick={onDismiss} className="flex-shrink-0 text-stone-400 hover:text-stone-600">
+      <button onClick={onDismiss} className="flex-shrink-0 text-stone-400 hover:text-stone-600 transition-colors">
         <X size={14} />
       </button>
     </div>

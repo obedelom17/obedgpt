@@ -174,3 +174,37 @@
   from { stroke-dashoffset: 100; }
   to   { stroke-dashoffset: 0; }
 }
+
+/* ——— KaTeX Math Styles ——— */
+.katex {
+  font-size: 1em !important;
+  color: #1C1917;
+}
+
+/* Inline math */
+.prose-obedgpt .katex {
+  color: #C2410C;
+}
+
+/* Block math (display mode) */
+.prose-obedgpt .katex-display {
+  margin: 1.25em 0;
+  padding: 1rem 1.5rem;
+  background: #FFF7ED;
+  border: 1px solid #FDE8D0;
+  border-radius: 0.75rem;
+  overflow-x: auto;
+  text-align: center;
+}
+
+.prose-obedgpt .katex-display .katex {
+  color: #1C1917;
+  font-size: 1.1em !important;
+}
+
+/* Scrollable on mobile */
+.katex-display > .katex {
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
