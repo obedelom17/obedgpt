@@ -100,11 +100,11 @@ export default function ChatMode() {
   const reset = () => { setMessages([]); clearError(); setAttachedFiles([]) }
 
   return (
-    <div className="flex flex-col h-full bg-navy-900 dark:bg-navy-950">
+    <div className="flex flex-col h-full bg-navy-900">
       {/* System prompt */}
-      <div className="px-3 md:px-4 py-2 border-b border-orange-100 dark:border-orange-900/30 bg-white/60 dark:bg-navy-900/60">
+      <div className="px-3 md:px-4 py-2 border-b border-orange-100 bg-white/60">
         <button onClick={() => setShowSystem(!showSystem)}
-          className="flex items-center gap-2 text-xs text-stone-400 dark:text-stone-500 hover:text-orange-500 transition-colors">
+          className="flex items-center gap-2 text-xs text-stone-400 hover:text-orange-500 transition-colors">
           <Sliders size={12} />
           <span className="truncate">Invite système — {SYSTEM_PRESETS.find(p => p.value === systemPrompt)?.label || 'Personnalisé'}</span>
         </button>
@@ -117,7 +117,7 @@ export default function ChatMode() {
               ))}
             </div>
             <textarea value={systemPrompt} onChange={e => setSystemPrompt(e.target.value)}
-              rows={2} className="input-field text-xs w-full dark:bg-navy-800 dark:border-orange-900/40 dark:text-stone-200" placeholder="Invite système personnalisée..." />
+              rows={2} className="input-field text-xs w-full" placeholder="Invite système personnalisée..." />
           </div>
         )}
       </div>
@@ -131,13 +131,13 @@ export default function ChatMode() {
             </div>
             <div>
               <h2 className="font-display font-bold text-lg md:text-xl text-gradient">ObedGPT Chat</h2>
-              <p className="text-stone-400 dark:text-stone-500 text-xs md:text-sm mt-1">Pose une question, démarre une conversation</p>
+              <p className="text-stone-400 text-xs md:text-sm mt-1">Pose une question, démarre une conversation</p>
               {tempMode && <p className="text-orange-500 text-xs mt-1 flex items-center gap-1 justify-center"><Flame size={12} /> Mode temporaire</p>}
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-w-md w-full mt-2">
               {['Explique le machine learning', 'Écris un composant React', 'Résous $x^2 - 5x + 6 = 0$', 'Traduis en anglais'].map(s => (
                 <button key={s} onClick={() => setInput(s)}
-                  className="text-xs text-left p-2.5 md:p-3 card rounded-xl text-stone-500 dark:text-stone-400 hover:text-orange-600 dark:hover:text-orange-400 hover:border-orange-200 dark:hover:border-orange-800 transition-all">{s}</button>
+                  className="text-xs text-left p-2.5 md:p-3 card rounded-xl text-stone-500 hover:text-orange-600 hover:border-orange-200 transition-all">{s}</button>
               ))}
             </div>
           </div>
@@ -149,15 +149,15 @@ export default function ChatMode() {
               <div className="w-6 h-6 md:w-7 md:h-7 rounded-lg amber-gradient flex items-center justify-center flex-shrink-0 mt-0.5">
                 <Zap size={10} className="text-white" /></div>
             )}
-            <div className={`max-w-[85%] sm:max-w-[75%] ${msg.role === 'user' ? 'message-user dark:bg-orange-900/30 dark:border-orange-800' : 'message-ai dark:bg-navy-800 dark:border-orange-900/30'}`}>
+            <div className={`max-w-[85%] sm:max-w-[75%] ${msg.role === 'user' ? 'message-user' : 'message-ai'}`}>
               {msg.role === 'user' 
-                ? <p className="text-xs md:text-sm text-stone-800 dark:text-stone-200 break-words">{msg.content}</p> 
+                ? <p className="text-xs md:text-sm text-stone-800 break-words">{msg.content}</p> 
                 : <MarkdownRenderer content={msg.content} />
               }
             </div>
             {msg.role === 'user' && (
-              <div className="w-6 h-6 md:w-7 md:h-7 rounded-lg bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 flex items-center justify-center flex-shrink-0 mt-0.5">
-                <User size={10} className="text-orange-400 dark:text-orange-500" /></div>
+              <div className="w-6 h-6 md:w-7 md:h-7 rounded-lg bg-orange-50 border border-orange-200 flex items-center justify-center flex-shrink-0 mt-0.5">
+                <User size={10} className="text-orange-400" /></div>
             )}
           </div>
         ))}
@@ -166,7 +166,7 @@ export default function ChatMode() {
           <div className="flex gap-2 md:gap-3">
             <div className="w-6 h-6 md:w-7 md:h-7 rounded-lg amber-gradient flex items-center justify-center flex-shrink-0 mt-0.5">
               <Zap size={10} className="text-white" /></div>
-            <div className="message-ai dark:bg-navy-800 dark:border-orange-900/30"><LoadingDots /></div>
+            <div className="message-ai"><LoadingDots /></div>
           </div>
         )}
         <div ref={bottomRef} />
@@ -182,7 +182,7 @@ export default function ChatMode() {
       {attachedFiles.length > 0 && (
         <div className="px-3 md:px-4 pt-2 flex flex-wrap gap-2">
           {attachedFiles.map((file, i) => (
-            <div key={i} className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 text-xs text-orange-700 dark:text-orange-400">
+            <div key={i} className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-orange-50 border border-orange-200 text-xs text-orange-700">
               <FileText size={12} />
               <span className="max-w-[100px] md:max-w-[120px] truncate">{file.name}</span>
               <button onClick={() => removeFile(i)} className="hover:text-red-500"><X size={12} /></button>
@@ -192,7 +192,7 @@ export default function ChatMode() {
       )}
 
       {/* Input */}
-      <div className="px-3 md:px-4 pb-3 md:pb-4 pt-2 border-t border-orange-100 dark:border-orange-900/30 bg-white/60 dark:bg-navy-900/60">
+      <div className="px-3 md:px-4 pb-3 md:pb-4 pt-2 border-t border-orange-100 bg-white/60">
         <div className="flex gap-2 items-end">
           {messages.length > 0 && (
             <button onClick={reset} className="btn-ghost p-2 md:p-2.5 flex-shrink-0 hidden sm:flex" title="Nouvelle conversation"><RotateCcw size={15} /></button>
@@ -205,14 +205,14 @@ export default function ChatMode() {
           <textarea value={input} onChange={e => setInput(e.target.value)} onKeyDown={onKeyDown}
             rows={1} disabled={loading}
             placeholder="Message..."
-            className="input-field resize-none flex-1 dark:bg-navy-800 dark:border-orange-900/40 dark:text-stone-200 dark:placeholder-stone-600 text-sm"
+            className="input-field resize-none flex-1 text-sm"
             style={{ minHeight: '40px', maxHeight: '120px' }}
             onInput={e => { e.target.style.height = 'auto'; e.target.style.height = Math.min(e.target.scrollHeight, 120) + 'px' }}
           />
           <button onClick={send} disabled={(!input.trim() && attachedFiles.length === 0) || loading} className="btn-primary p-2.5 md:p-3 flex-shrink-0">
             <Send size={15} /></button>
         </div>
-        <p className="text-[10px] text-stone-400 dark:text-stone-500 mt-1 text-center font-mono">
+        <p className="text-[10px] text-stone-400 mt-1 text-center font-mono">
           {messages.length} msg · SmartRouter
         </p>
       </div>

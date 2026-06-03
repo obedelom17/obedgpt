@@ -28,53 +28,53 @@ export default function Sidebar({ modes, activeMode, setActiveMode, isOpen, setI
   const isMobile = typeof window !== 'undefined' && window.innerWidth < 768
 
   return (
-    <aside className={`fixed md:relative z-30 flex flex-col border-r border-orange-100 dark:border-orange-900/30 bg-white dark:bg-navy-900 shadow-xl md:shadow-sm
+    <aside className={`fixed md:relative z-30 flex flex-col border-r border-orange-100 bg-white shadow-xl md:shadow-sm
         transition-all duration-300 ease-in-out h-full
         ${isOpen ? 'translate-x-0 w-72' : '-translate-x-full md:translate-x-0 w-0 md:w-[60px] overflow-hidden'}`}
     >
       {/* Mobile close button */}
       <button 
         onClick={() => setIsOpen(false)}
-        className="absolute top-3 right-3 md:hidden w-8 h-8 rounded-lg bg-stone-100 dark:bg-stone-800 flex items-center justify-center text-stone-500 z-40"
+        className="absolute top-3 right-3 md:hidden w-8 h-8 rounded-lg bg-stone-100 flex items-center justify-center text-stone-500 z-40"
       >
         <X size={18} />
       </button>
 
       {/* Logo */}
-      <div className={`flex items-center gap-3 px-4 py-4 border-b border-orange-100 dark:border-orange-900/30 ${!isOpen && 'md:justify-center md:px-0'}`}>
+      <div className={`flex items-center gap-3 px-4 py-4 border-b border-orange-100 ${!isOpen && 'md:justify-center md:px-0'}`}>
         <div className="w-8 h-8 rounded-xl amber-gradient flex items-center justify-center flex-shrink-0 shadow-glow-sm">
           <Zap size={16} className="text-white" strokeWidth={2.5} />
         </div>
         {isOpen && (
           <div className="min-w-0">
             <div className="font-display font-bold text-base text-gradient leading-none">ObedGPT</div>
-            <div className="text-[10px] text-stone-400 dark:text-stone-500 font-mono mt-0.5 truncate">intelligence artificielle</div>
+            <div className="text-[10px] text-stone-400 font-mono mt-0.5 truncate">intelligence artificielle</div>
           </div>
         )}
       </div>
 
       {/* New Chat Buttons */}
       {isOpen && (
-        <div className="px-3 py-3 space-y-2 border-b border-orange-100 dark:border-orange-900/30">
+        <div className="px-3 py-3 space-y-2 border-b border-orange-100">
           <button onClick={startNewChat}
-            className="flex items-center gap-2 w-full px-3 py-2.5 rounded-xl bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 text-orange-600 dark:text-orange-400 text-sm font-medium hover:bg-orange-100 dark:hover:bg-orange-900/30 transition-all active:scale-95">
+            className="flex items-center gap-2 w-full px-3 py-2.5 rounded-xl bg-orange-50 border border-orange-200 text-orange-600 text-sm font-medium hover:bg-orange-100 transition-all active:scale-95">
             <Plus size={16} /> Nouveau chat
           </button>
           <button onClick={startTempChat}
             className={`flex items-center gap-2 w-full px-3 py-2.5 rounded-xl border text-sm font-medium transition-all active:scale-95
               ${tempMode && activeMode === 'chat'
-                ? 'bg-orange-100 dark:bg-orange-900/40 border-orange-300 dark:border-orange-700 text-orange-700 dark:text-orange-300'
-                : 'bg-white dark:bg-navy-800 border-orange-200 dark:border-orange-900/40 text-stone-600 dark:text-stone-400 hover:bg-orange-50 dark:hover:bg-orange-900/20'}`}>
+                ? 'bg-orange-100 border-orange-300 text-orange-700'
+                : 'bg-white border-orange-200 text-stone-600 hover:bg-orange-50'}`}>
             <Flame size={16} /> Chat temporaire
           </button>
         </div>
       )}
       {!isOpen && (
-        <div className="px-2 py-3 space-y-2 border-b border-orange-100 dark:border-orange-900/30 hidden md:flex flex-col items-center">
-          <button onClick={startNewChat} className="w-10 h-10 rounded-xl bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 flex items-center justify-center text-orange-600 dark:text-orange-400 hover:bg-orange-100 dark:hover:bg-orange-900/30 transition-all active:scale-95" title="Nouveau chat">
+        <div className="px-2 py-3 space-y-2 border-b border-orange-100 hidden md:flex flex-col items-center">
+          <button onClick={startNewChat} className="w-10 h-10 rounded-xl bg-orange-50 border border-orange-200 flex items-center justify-center text-orange-600 hover:bg-orange-100 transition-all active:scale-95" title="Nouveau chat">
             <Plus size={16} />
           </button>
-          <button onClick={startTempChat} className={`w-10 h-10 rounded-xl border flex items-center justify-center transition-all active:scale-95 ${tempMode && activeMode === 'chat' ? 'bg-orange-100 dark:bg-orange-900/40 border-orange-300 dark:border-orange-700 text-orange-700 dark:text-orange-300' : 'bg-white dark:bg-navy-800 border-orange-200 dark:border-orange-900/40 text-stone-600 dark:text-stone-400 hover:bg-orange-50 dark:hover:bg-orange-900/20'}`} title="Chat temporaire">
+          <button onClick={startTempChat} className={`w-10 h-10 rounded-xl border flex items-center justify-center transition-all active:scale-95 ${tempMode && activeMode === 'chat' ? 'bg-orange-100 border-orange-300 text-orange-700' : 'bg-white border-orange-200 text-stone-600 hover:bg-orange-50'}`} title="Chat temporaire">
             <Flame size={16} />
           </button>
         </div>
@@ -82,8 +82,8 @@ export default function Sidebar({ modes, activeMode, setActiveMode, isOpen, setI
 
       {/* Chat History */}
       {isOpen && history.length > 0 && activeMode === 'chat' && (
-        <div className="px-3 py-2 border-b border-orange-100 dark:border-orange-900/30">
-          <div className="px-3 mb-1.5 text-[10px] font-display font-semibold tracking-widest text-stone-300 dark:text-stone-600 uppercase flex items-center gap-1">
+        <div className="px-3 py-2 border-b border-orange-100">
+          <div className="px-3 mb-1.5 text-[10px] font-display font-semibold tracking-widest text-stone-300 uppercase flex items-center gap-1">
             <Clock size={10} /> Historique
           </div>
           <div className="space-y-0.5 max-h-40 overflow-y-auto">
@@ -92,24 +92,24 @@ export default function Sidebar({ modes, activeMode, setActiveMode, isOpen, setI
                 onClick={() => loadChat(conv.id)}
                 className={`group flex items-center gap-2 px-3 py-2 rounded-xl text-xs cursor-pointer transition-all
                   ${activeChatId === conv.id && !tempMode
-                    ? 'bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 text-orange-700 dark:text-orange-300'
-                    : 'text-stone-500 dark:text-stone-400 hover:bg-stone-50 dark:hover:bg-stone-800/50'}`}>
+                    ? 'bg-orange-50 border border-orange-200 text-orange-700'
+                    : 'text-stone-500 hover:bg-stone-50'}`}>
                 <MessageCircle size={14} className="flex-shrink-0" />
                 {editingId === conv.id ? (
                   <input autoFocus value={editTitle} onChange={e => setEditTitle(e.target.value)}
                     onBlur={() => handleRename(conv.id)} onKeyDown={e => e.key === 'Enter' && handleRename(conv.id)}
-                    className="flex-1 bg-white dark:bg-navy-800 border border-orange-200 dark:border-orange-800 rounded px-1 py-0.5 text-xs outline-none min-w-0"
+                    className="flex-1 bg-white border border-orange-200 rounded px-1 py-0.5 text-xs outline-none min-w-0"
                     onClick={e => e.stopPropagation()} />
                 ) : (
                   <span className="flex-1 truncate min-w-0">{conv.title || 'Sans titre'}</span>
                 )}
                 <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
                   <button onClick={e => { e.stopPropagation(); setEditingId(conv.id); setEditTitle(conv.title || 'Sans titre') }}
-                    className="p-1 rounded hover:bg-orange-100 dark:hover:bg-orange-900/30 text-stone-400 dark:text-stone-500">
+                    className="p-1 rounded hover:bg-orange-100 text-stone-400">
                     <Edit2 size={10} />
                   </button>
                   <button onClick={e => { e.stopPropagation(); deleteConversation(conv.id) }}
-                    className="p-1 rounded hover:bg-red-100 dark:hover:bg-red-900/30 text-stone-400 dark:text-stone-500 hover:text-red-500">
+                    className="p-1 rounded hover:bg-red-100 text-stone-400 hover:text-red-500">
                     <Trash2 size={10} />
                   </button>
                 </div>
@@ -124,7 +124,7 @@ export default function Sidebar({ modes, activeMode, setActiveMode, isOpen, setI
         {GROUPS.map(group => (
           <div key={group.label}>
             {isOpen && (
-              <div className="px-3 mb-1.5 text-[10px] font-display font-semibold tracking-widest text-stone-300 dark:text-stone-600 uppercase">
+              <div className="px-3 mb-1.5 text-[10px] font-display font-semibold tracking-widest text-stone-300 uppercase">
                 {group.label}
               </div>
             )}
@@ -150,8 +150,8 @@ export default function Sidebar({ modes, activeMode, setActiveMode, isOpen, setI
 
       {/* Toggle - desktop only */}
       <button onClick={() => setIsOpen(!isOpen)}
-        className="hidden md:flex absolute -right-3 top-[72px] w-6 h-6 rounded-full bg-white dark:bg-navy-800 border border-orange-200 dark:border-orange-800
-                   items-center justify-center text-stone-400 dark:text-stone-500 hover:text-orange-500
+        className="hidden md:flex absolute -right-3 top-[72px] w-6 h-6 rounded-full bg-white border border-orange-200
+                   items-center justify-center text-stone-400 hover:text-orange-500
                    hover:border-orange-400 transition-all duration-200 z-30 shadow-sm"
       >
         {isOpen ? <ChevronLeft size={12} /> : <ChevronRight size={12} />}

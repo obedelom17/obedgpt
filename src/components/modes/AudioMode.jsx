@@ -46,7 +46,7 @@ export default function AudioMode() {
         {loading && <div className="card p-4"><LoadingDots label="Transcription en cours..." /></div>}
         {result && !loading && (
           <div className="card p-5 animate-slide-up">
-            <div className="flex items-center gap-2 mb-3 pb-3 border-b border-orange-100 dark:border-orange-900/30">
+            <div className="flex items-center gap-2 mb-3 pb-3 border-b border-orange-100">
               <Mic size={14} className="text-orange-500" />
               <span className="text-xs font-display font-semibold text-orange-500 uppercase tracking-wider">Transcription Audio</span>
             </div>

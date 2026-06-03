@@ -27,8 +27,8 @@ export default function VisionMode() {
           <FileUploadZone onFile={f => { setFile(f); setResult(null) }} currentFile={file}
             accept="image/jpeg,image/png,image/webp,image/gif" label="Déposer une image" hint="JPG, PNG, WebP · Max 10MB" />
           {file && (
-            <div className="rounded-xl overflow-hidden border border-orange-100 dark:border-orange-900/30 max-h-72">
-              <img src={`data:${file.mimeType};base64,${file.base64}`} alt="Aperçu" className="w-full h-full object-contain bg-stone-50 dark:bg-stone-900" />
+            <div className="rounded-xl overflow-hidden border border-orange-100 max-h-72">
+              <img src={`data:${file.mimeType};base64,${file.base64}`} alt="Aperçu" className="w-full h-full object-contain bg-stone-50" />
             </div>
           )}
           <div>
@@ -49,7 +49,7 @@ export default function VisionMode() {
         {loading && <div className="card p-4"><LoadingDots label="Analyse de l'image..." /></div>}
         {result && !loading && (
           <div className="card p-5 animate-slide-up">
-            <div className="flex items-center gap-2 mb-3 pb-3 border-b border-orange-100 dark:border-orange-900/30">
+            <div className="flex items-center gap-2 mb-3 pb-3 border-b border-orange-100">
               <Eye size={14} className="text-orange-500" />
               <span className="text-xs font-display font-semibold text-orange-500 uppercase tracking-wider">Analyse Vision</span>
             </div>
