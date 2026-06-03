@@ -108,7 +108,8 @@ export default function App() {
           <div className="flex flex-col flex-1 min-w-0 relative z-10">
             <Header mode={MODES[activeMode]?.label} sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
             <main className="flex-1 overflow-hidden">
-              <ActiveComponent />
+              {/* KEY: force remount on every conversation change to prevent stale state */}
+              <ActiveComponent key={activeChatId || `temp-${tempMode}`} />
             </main>
           </div>
         </div>

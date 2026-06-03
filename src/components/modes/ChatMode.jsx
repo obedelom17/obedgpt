@@ -1,49 +1,39 @@
 import { useState, useRef, useEffect } from 'react'
-import { Send, RotateCcw, User, Zap, Sliders, FileText, X, Paperclip } from 'lucide-react'
+import { Send, RotateCcw, User, Zap, FileText, X, Paperclip } from 'lucide-react'
 import { LoadingDots, MarkdownRenderer, ErrorBanner } from '../ui'
 import { useApiCall } from '../../hooks/useApiCall'
 import { useApp } from '../../App'
 
-const SYSTEM_PRESETS = [
-  { label: 'Assistant général',  value: "Tu es ObedGPT, un assistant IA intelligent. Réponds dans la langue de l'utilisateur. Utilise LaTeX pour les maths : $...$ inline, $$...$$ pour les blocs." },
-  { label: 'Développeur senior', value: 'Tu es un développeur senior expert en React, Python, Java, Flutter. Donne du code production-ready avec commentaires.' },
-  { label: 'Tuteur académique',  value: "Tu es un tuteur pédagogue. Explique avec des exemples concrets. Utilise LaTeX pour les formules mathématiques." },
-  { label: 'Rédacteur pro',      value: 'Tu es un rédacteur professionnel. Textes clairs, engageants et bien structurés.' },
-]
+const SYSTEM_PROMPT = "Tu es ObedGPT, un assistant IA intelligent. Réponds dans la langue de l'utilisateur. Utilise LaTeX pour les maths : $...$ inline, $$...$$ pour les blocs."
 
 const ALLOWED_DOCS = ['application/pdf', 'text/plain', 'text/csv', 'application/json', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document']
 const MAX_DOC_SIZE = 10 * 1024 * 1024
 
 export default function ChatMode() {
-  const { activeChatId, tempMode, saveConversation, history, loadChat } = useApp()
+  const { activeChatId, tempMode, saveConversation, history } = useApp()
   const savedConv = activeChatId ? history.find(c => c.id === activeChatId) : null
 
   const [messages, setMessages]     = useState(() => savedConv?.messages || [])
   const [input, setInput]           = useState('')
-  const [systemPrompt, setSystemPrompt] = useState(SYSTEM_PRESETS[0].value)
-  const [showSystem, setShowSystem] = useState(false)
+  const [systemPrompt] = useState(SYSTEM_PROMPT)
   const [attachedFiles, setAttachedFiles] = useState([])
   const { loading, error, call, retry, clearError } = useApiCall()
   const bottomRef  = useRef(null)
   const lastMsgs   = useRef([])
   const fileInputRef = useRef(null)
 
-  useEffect(() => {
-    if (activeChatId && savedConv) {
-      setMessages(savedConv.messages || [])
-    } else if (!activeChatId && !tempMode) {
-      setMessages([])
-    }
-  }, [activeChatId, savedConv, tempMode])
-
+  // Auto-save non-temp conversations
   useEffect(() => {
     if (!tempMode && activeChatId && messages.length > 0) {
       const title = messages[0].content.slice(0, 50) || 'Nouvelle conversation'
       saveConversation(activeChatId, title, messages)
     }
-  }, [messages, activeChatId, tempMode])
+  }, [messages, activeChatId, tempMode, saveConversation])
 
-  useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: 'smooth' }) }, [messages, loading])
+  // Scroll to bottom
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [messages, loading])
 
   const handleFileSelect = (e) => {
     const files = Array.from(e.target.files)
@@ -101,27 +91,6 @@ export default function ChatMode() {
 
   return (
     <div className="flex flex-col h-full bg-navy-900">
-      {/* System prompt */}
-      <div className="px-3 md:px-4 py-2 border-b border-orange-100 bg-white/60">
-        <button onClick={() => setShowSystem(!showSystem)}
-          className="flex items-center gap-2 text-xs text-stone-400 hover:text-orange-500 transition-colors">
-          <Sliders size={12} />
-          <span className="truncate">Invite système — {SYSTEM_PRESETS.find(p => p.value === systemPrompt)?.label || 'Personnalisé'}</span>
-        </button>
-        {showSystem && (
-          <div className="mt-2 space-y-2 animate-fade-in">
-            <div className="flex flex-wrap gap-2">
-              {SYSTEM_PRESETS.map(p => (
-                <button key={p.label} onClick={() => setSystemPrompt(p.value)}
-                  className={`tag ${systemPrompt === p.value ? 'active-tag' : ''}`}>{p.label}</button>
-              ))}
-            </div>
-            <textarea value={systemPrompt} onChange={e => setSystemPrompt(e.target.value)}
-              rows={2} className="input-field text-xs w-full" placeholder="Invite système personnalisée..." />
-          </div>
-        )}
-      </div>
-
       {/* Messages */}
       <div className="flex-1 overflow-y-auto px-3 md:px-4 py-3 md:py-4 space-y-3 md:space-y-4">
         {messages.length === 0 && !loading && (
