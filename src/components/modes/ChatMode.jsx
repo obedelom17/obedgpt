@@ -1,12 +1,19 @@
 import { useState, useRef, useEffect } from 'react'
-import { Send, RotateCcw, User, Zap, FileText, X, Paperclip } from 'lucide-react'
+import { Send, RotateCcw, User, Zap, FileText, X, Paperclip, Image as ImageIcon } from 'lucide-react'
 import { LoadingDots, MarkdownRenderer, ErrorBanner } from '../ui'
 import { useApiCall } from '../../hooks/useApiCall'
 import { useApp } from '../../App'
 
 const SYSTEM_PROMPT = "Tu es ObedGPT, un assistant IA intelligent. Réponds dans la langue de l'utilisateur. Utilise LaTeX pour les maths : $...$ inline, $$...$$ pour les blocs."
 
-const ALLOWED_DOCS = ['application/pdf', 'text/plain', 'text/csv', 'application/json', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document']
+const ALLOWED_DOCS = [
+  // Documents
+  'application/pdf', 'text/plain', 'text/csv', 'application/json',
+  'application/msword',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  // Images
+  'image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/bmp', 'image/tiff', 'image/svg+xml'
+]
 const MAX_DOC_SIZE = 10 * 1024 * 1024
 
 export default function ChatMode() {
@@ -34,6 +41,8 @@ export default function ChatMode() {
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages, loading])
+
+  const isImage = (type) => type.startsWith('image/')
 
   const handleFileSelect = (e) => {
     const files = Array.from(e.target.files)
@@ -152,7 +161,7 @@ export default function ChatMode() {
         <div className="px-3 md:px-4 pt-2 flex flex-wrap gap-2">
           {attachedFiles.map((file, i) => (
             <div key={i} className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-orange-50 border border-orange-200 text-xs text-orange-700">
-              <FileText size={12} />
+              {isImage(file.type) ? <ImageIcon size={12} /> : <FileText size={12} />}
               <span className="max-w-[100px] md:max-w-[120px] truncate">{file.name}</span>
               <button onClick={() => removeFile(i)} className="hover:text-red-500"><X size={12} /></button>
             </div>
@@ -166,9 +175,10 @@ export default function ChatMode() {
           {messages.length > 0 && (
             <button onClick={reset} className="btn-ghost p-2 md:p-2.5 flex-shrink-0 hidden sm:flex" title="Nouvelle conversation"><RotateCcw size={15} /></button>
           )}
-          <input type="file" ref={fileInputRef} onChange={handleFileSelect} multiple accept={ALLOWED_DOCS.join(',')}
+          <input type="file" ref={fileInputRef} onChange={handleFileSelect} multiple
+            accept="image/*,.pdf,.txt,.csv,.json,.doc,.docx"
             className="hidden" />
-          <button onClick={() => fileInputRef.current?.click()} className="btn-ghost p-2 md:p-2.5 flex-shrink-0" title="Joindre un document">
+          <button onClick={() => fileInputRef.current?.click()} className="btn-ghost p-2 md:p-2.5 flex-shrink-0" title="Joindre un fichier">
             <Paperclip size={15} />
           </button>
           <textarea value={input} onChange={e => setInput(e.target.value)} onKeyDown={onKeyDown}
