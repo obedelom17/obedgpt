@@ -44,7 +44,7 @@ export default function Settings() {
             </div>
             <div className="min-w-0">
               <h2 className="font-display font-bold text-stone-800 text-base md:text-lg">ObedGPT</h2>
-              <p className="text-xs text-stone-400">Interface IA multi-modale · SmartRouter</p>
+              <p className="text-xs text-stone-400">IA multi-modale · SmartRouter</p>
             </div>
           </div>
           <div className="grid grid-cols-2 gap-2 md:gap-3 text-center">
