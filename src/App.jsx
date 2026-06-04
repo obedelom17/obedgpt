@@ -29,51 +29,25 @@ export function useApp() {
 
 export default function App() {
   const [activeMode, setActiveMode] = useState('chat')
-  const [sidebarOpen, setSidebarOpen] = useState(false)
-  const [tempMode, setTempMode] = useState(false)
   const [activeChatId, setActiveChatId] = useState(null)
   const historyManager = useChatHistory()
 
-  useEffect(() => {
-    const handleResize = () => { if (window.innerWidth < 768) setSidebarOpen(false) }
-    window.addEventListener('resize', handleResize)
-    return () => window.removeEventListener('resize', handleResize)
-  }, [])
-
   const handleModeChange = (mode) => {
     setActiveMode(mode)
-    if (window.innerWidth < 768) setSidebarOpen(false)
   }
 
   const startNewChat = () => {
     const newId = historyManager.createNewId()
     setActiveChatId(newId)
-    setTempMode(false)
     setActiveMode('chat')
-    if (window.innerWidth < 768) setSidebarOpen(false)
-  }
-
-  const startTempChat = () => {
-    setActiveChatId(null)
-    setTempMode(true)
-    setActiveMode('chat')
-    if (window.innerWidth < 768) setSidebarOpen(false)
-  }
-
-  const loadChat = (id) => {
-    setActiveChatId(id)
-    setTempMode(false)
-    setActiveMode('chat')
-    if (window.innerWidth < 768) setSidebarOpen(false)
   }
 
   const ActiveComponent = MODES[activeMode]?.component || ChatMode
 
   const contextValue = {
     activeMode, setActiveMode: handleModeChange,
-    tempMode, setTempMode,
     activeChatId, setActiveChatId,
-    startNewChat, startTempChat, loadChat,
+    startNewChat,
     history: historyManager.history,
     saveConversation: historyManager.saveConversation,
     deleteConversation: historyManager.deleteConversation,
@@ -89,27 +63,12 @@ export default function App() {
           <div className="hidden md:block orb w-96 h-96 bg-orange-100/60 top-[-10%] left-[-5%]" style={{ animationDelay: '0s' }} />
           <div className="hidden md:block orb w-80 h-80 bg-orange-200/30 bottom-[-5%] right-[10%]" style={{ animationDelay: '-4s' }} />
 
-          {/* Mobile overlay */}
-          {sidebarOpen && (
-            <div 
-              className="fixed inset-0 bg-black/40 backdrop-blur-sm z-20 md:hidden" 
-              onClick={() => setSidebarOpen(false)} 
-            />
-          )}
-
-          <Sidebar
-            modes={MODES}
-            activeMode={activeMode}
-            setActiveMode={handleModeChange}
-            isOpen={sidebarOpen}
-            setIsOpen={setSidebarOpen}
-          />
+          <Sidebar />
 
           <div className="flex flex-col flex-1 min-w-0 relative z-10">
-            <Header mode={MODES[activeMode]?.label} sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
+            <Header mode={MODES[activeMode]?.label} />
             <main className="flex-1 overflow-hidden">
-              {/* KEY: force remount on every conversation change to prevent stale state */}
-              <ActiveComponent key={activeChatId || `temp-${tempMode}`} />
+              <ActiveComponent key={activeChatId} />
             </main>
           </div>
         </div>
