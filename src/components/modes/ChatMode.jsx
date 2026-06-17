@@ -1,10 +1,17 @@
 import { useState, useRef, useEffect } from 'react'
-import { Send, RotateCcw, User, Zap, FileText, X, Paperclip, Image as ImageIcon } from 'lucide-react'
+import { Send, RotateCcw, User, Zap, FileText, X, Paperclip, Image as ImageIcon, Flame } from 'lucide-react'
 import { LoadingDots, MarkdownRenderer, ErrorBanner } from '../ui'
 import { useApiCall } from '../../hooks/useApiCall'
 import { useApp } from '../../App'
 
 const SYSTEM_PROMPT = "Tu es ObedGPT, un assistant IA intelligent. Réponds dans la langue de l'utilisateur. Utilise LaTeX pour les maths : $...$ inline, $$...$$ pour les blocs."
+
+// On n'envoie jamais TOUT l'historique au modèle : au-delà d'un certain
+// nombre de messages, le coût en tokens d'un seul tour de chat exploserait
+// (chaque message renvoie tout ce qui précède). Le serveur applique de
+// toute façon la même limite en garde-fou, mais la tronquer ici évite aussi
+// d'envoyer une requête plus lourde que nécessaire sur le réseau.
+const MAX_CONTEXT_MESSAGES = 16
 
 const ALLOWED_DOCS = [
   // Documents
@@ -86,7 +93,8 @@ export default function ChatMode() {
     setAttachedFiles([])
     lastMsgs.current = newMessages
 
-    const data = await call('/api/chat', { messages: newMessages, systemPrompt, files: fileData })
+    const contextWindow = newMessages.slice(-MAX_CONTEXT_MESSAGES)
+    const data = await call('/api/chat', { messages: contextWindow, systemPrompt, files: fileData })
     if (data) setMessages(prev => [...prev, { role: 'assistant', content: data.text }])
   }
 
@@ -170,7 +178,7 @@ export default function ChatMode() {
       )}
 
       {/* Input */}
-      <div className="px-3 md:px-4 pb-3 md:pb-4 pt-2 border-t border-orange-100 bg-white/60">
+      <div className="px-3 md:px-4 pb-3 md:pb-4 pt-2 border-t border-orange-100 bg-white/60 safe-bottom">
         <div className="flex gap-2 items-end">
           {messages.length > 0 && (
             <button onClick={reset} className="btn-ghost p-2 md:p-2.5 flex-shrink-0 hidden sm:flex" title="Nouvelle conversation"><RotateCcw size={15} /></button>
@@ -192,7 +200,7 @@ export default function ChatMode() {
             <Send size={15} /></button>
         </div>
         <p className="text-[10px] text-stone-400 mt-1 text-center font-mono">
-          {messages.length} msg · SmartRouter
+          {messages.length} msg · contexte: {Math.min(messages.length, MAX_CONTEXT_MESSAGES)} · SmartRouter
         </p>
       </div>
     </div>

@@ -205,6 +205,16 @@
   .safe-bottom { padding-bottom: max(1rem, env(safe-area-inset-bottom)); }
 }
 
+/* 100vh sur mobile inclut la zone derrière la barre d'adresse qui
+   apparaît/disparaît (Safari iOS, Chrome Android) : le bas de l'app (zone
+   de saisie) peut alors se retrouver coupé. 100dvh suit la vraie hauteur
+   visible. On garde 100vh comme repli pour les très vieux navigateurs qui
+   ignorent simplement la ligne suivante. */
+.app-height {
+  height: 100vh;
+  height: 100dvh;
+}
+
 .prose-obedgpt { color: #44403C; line-height: 1.75; font-size: 0.875rem; }
 .prose-obedgpt h1, .prose-obedgpt h2, .prose-obedgpt h3 {
   color: #1C1917; font-family: 'Syne', sans-serif; font-weight: 600;

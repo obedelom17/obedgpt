@@ -1,14 +1,20 @@
-import { useState, useEffect, createContext, useContext } from 'react'
+import { useState, lazy, Suspense, createContext, useContext } from 'react'
 import { ThemeProvider } from './hooks/useTheme.jsx'
 import { useChatHistory } from './hooks/useChatHistory'
 import Sidebar from './components/layout/Sidebar'
 import Header from './components/layout/Header'
 import ChatMode from './components/modes/ChatMode'
-import VisionMode from './components/modes/VisionMode'
-import AudioMode from './components/modes/AudioMode'
-import CodeMode from './components/modes/CodeMode'
-import TTSMode from './components/modes/TTSMode'
-import Settings from './components/Settings'
+import { LoadingDots } from './components/ui'
+
+// Chat est le mode par défaut donc chargé immédiatement. Les autres modes
+// sont chargés à la demande : sur mobile/connexion lente, ça évite de
+// télécharger tout le JS (vision, audio, code, tts, settings) d'un coup
+// alors qu'on n'utilisera peut-être que le chat.
+const VisionMode = lazy(() => import('./components/modes/VisionMode'))
+const AudioMode  = lazy(() => import('./components/modes/AudioMode'))
+const CodeMode   = lazy(() => import('./components/modes/CodeMode'))
+const TTSMode    = lazy(() => import('./components/modes/TTSMode'))
+const Settings   = lazy(() => import('./components/Settings'))
 
 const MODES = {
   chat:     { label: 'Chat',            component: ChatMode },
@@ -29,17 +35,29 @@ export function useApp() {
 
 export default function App() {
   const [activeMode, setActiveMode] = useState('chat')
-  const [activeChatId, setActiveChatId] = useState(null)
   const historyManager = useChatHistory()
+  // On initialise tout de suite un id pour que la première conversation
+  // (avant tout clic sur "Nouveau chat") soit elle aussi sauvegardée.
+  const [activeChatId, setActiveChatId] = useState(() => historyManager.createNewId())
+  const [tempMode, setTempMode] = useState(false)
+  const [sidebarOpen, setSidebarOpen] = useState(false)
 
   const handleModeChange = (mode) => {
     setActiveMode(mode)
+    setSidebarOpen(false)
   }
 
   const startNewChat = () => {
     const newId = historyManager.createNewId()
     setActiveChatId(newId)
     setActiveMode('chat')
+    setSidebarOpen(false)
+  }
+
+  const openConversation = (id) => {
+    setActiveChatId(id)
+    setActiveMode('chat')
+    setSidebarOpen(false)
   }
 
   const ActiveComponent = MODES[activeMode]?.component || ChatMode
@@ -47,7 +65,9 @@ export default function App() {
   const contextValue = {
     activeMode, setActiveMode: handleModeChange,
     activeChatId, setActiveChatId,
-    startNewChat,
+    startNewChat, openConversation,
+    tempMode, setTempMode,
+    sidebarOpen, setSidebarOpen,
     history: historyManager.history,
     saveConversation: historyManager.saveConversation,
     deleteConversation: historyManager.deleteConversation,
@@ -58,7 +78,7 @@ export default function App() {
   return (
     <ThemeProvider>
       <AppContext.Provider value={contextValue}>
-        <div className="flex h-screen w-screen overflow-hidden bg-navy-900 relative">
+        <div className="flex app-height w-screen overflow-hidden bg-navy-900 relative">
           {/* Background orbs - hidden on mobile */}
           <div className="hidden md:block orb w-96 h-96 bg-orange-100/60 top-[-10%] left-[-5%]" style={{ animationDelay: '0s' }} />
           <div className="hidden md:block orb w-80 h-80 bg-orange-200/30 bottom-[-5%] right-[10%]" style={{ animationDelay: '-4s' }} />
@@ -68,7 +88,9 @@ export default function App() {
           <div className="flex flex-col flex-1 min-w-0 relative z-10">
             <Header mode={MODES[activeMode]?.label} />
             <main className="flex-1 overflow-hidden">
-              <ActiveComponent key={activeChatId} />
+              <Suspense fallback={<div className="h-full flex items-center justify-center"><LoadingDots label="Chargement..." /></div>}>
+                <ActiveComponent key={activeChatId} />
+              </Suspense>
             </main>
           </div>
         </div>

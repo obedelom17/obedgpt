@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 
 const STORAGE_KEY = 'obedgpt-chat-history'
+const MAX_STORED_CONVERSATIONS = 50
 
 function generateId() {
   return Date.now().toString(36) + Math.random().toString(36).slice(2, 9)
@@ -30,7 +31,8 @@ export function useChatHistory() {
       if (existing) {
         return prev.map(c => c.id === id ? { ...c, title, messages, updatedAt: getTimestamp() } : c)
       }
-      return [{ id, title, messages, createdAt: getTimestamp(), updatedAt: getTimestamp() }, ...prev]
+      const next = [{ id, title, messages, createdAt: getTimestamp(), updatedAt: getTimestamp() }, ...prev]
+      return next.slice(0, MAX_STORED_CONVERSATIONS)
     })
   }, [])
 

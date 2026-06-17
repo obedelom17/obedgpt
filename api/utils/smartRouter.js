@@ -22,11 +22,43 @@ const RATE_LIMIT_WINDOW_MS = 60_000
 const RATE_LIMIT_MAX = 10       // 10 req/min par IP (augmenté pour classe)
 const CACHE_TTL_MS = 3 * 60_000 // 3 minutes (plus agressif)
 
+// ─── Budget de tokens ───
+// Beaucoup d'utilisateurs partagent les mêmes clés API gratuites : on garde
+// les réponses raisonnablement courtes et on limite l'historique envoyé au
+// modèle pour ne pas faire exploser le coût en tokens d'une conversation
+// qui s'allonge (le coût d'un tour de chat croît avec TOUT l'historique
+// renvoyé à chaque message, pas juste le dernier message).
+const MAX_OUTPUT_TOKENS_CHAT = 2048
+const MAX_OUTPUT_TOKENS_CODE = 4096
+const MAX_OUTPUT_TOKENS_MEDIA = 2048
+const MAX_HISTORY_MESSAGES = 16 // ~8 échanges user/assistant max envoyés au modèle
+
 // ─── State ───
+// ⚠️ Limitation connue : sur Vercel, chaque instance serverless a sa propre
+// mémoire. En cas de cold start ou de scaling horizontal, ce rate limit et
+// ce cache ne sont donc pas garantis à 100% (ils restent utiles entre deux
+// requêtes traitées par la même instance "chaude"). Pour une garantie
+// stricte multi-instances il faudrait un store partagé (ex: Vercel KV /
+// Upstash Redis), volontairement non ajouté ici pour rester simple.
 let currentGroqIndex = 0
 let currentGeminiIndex = 0
 const rateLimitMap = new Map()
 const cacheMap = new Map()
+const MAX_TRACKED_IPS = 500
+const MAX_CACHE_ENTRIES = 200
+
+// Nettoyage opportuniste : évite que rateLimitMap/cacheMap grossissent
+// indéfiniment sur une instance qui reste "chaude" longtemps.
+function pruneExpired(map) {
+  const now = Date.now()
+  for (const [key, entry] of map) {
+    const expiry = entry.resetAt ?? entry.expiresAt
+    if (now > expiry) map.delete(key)
+  }
+  // Garde-fou supplémentaire si trop d'entrées s'accumulent malgré tout
+  const limit = map === cacheMap ? MAX_CACHE_ENTRIES : MAX_TRACKED_IPS
+  if (map.size > limit) map.clear()
+}
 
 // ─── Helpers ───
 function getClientIP(req) {
@@ -37,6 +69,7 @@ function getClientIP(req) {
 }
 
 function checkRateLimit(ip) {
+  pruneExpired(rateLimitMap)
   const now = Date.now()
   const entry = rateLimitMap.get(ip)
   if (!entry || now > entry.resetAt) {
@@ -62,6 +95,7 @@ function getCacheKey(body) {
 }
 
 function getCached(hash) {
+  pruneExpired(cacheMap)
   const entry = cacheMap.get(hash)
   if (!entry) return null
   if (Date.now() > entry.expiresAt) {
@@ -95,7 +129,7 @@ async function callGroq(body, keyIndex = 0) {
   if (!key) throw new Error('NO_GROQ_KEYS')
 
   const groq = new Groq({ apiKey: key })
-  const messages = body.messages || []
+  const messages = (body.messages || []).slice(-MAX_HISTORY_MESSAGES)
   const systemPrompt = body.systemPrompt
 
   const chatCompletion = await groq.chat.completions.create({
@@ -104,7 +138,7 @@ async function callGroq(body, keyIndex = 0) {
       : messages,
     model: 'llama-3.3-70b-versatile',
     temperature: 0.7,
-    max_tokens: 8192,
+    max_tokens: MAX_OUTPUT_TOKENS_CHAT,
   })
 
   return { text: chatCompletion.choices[0]?.message?.content || '' }
@@ -118,7 +152,7 @@ async function callGemini(body, keyIndex = 0) {
   const genAI = new GoogleGenerativeAI(key)
   const model = genAI.getGenerativeModel({ model: FALLBACK_MODEL })
 
-  const messages = body.messages || []
+  const messages = (body.messages || []).slice(-MAX_HISTORY_MESSAGES)
   const systemPrompt = body.systemPrompt
 
   const history = []
@@ -146,7 +180,7 @@ async function callGemini(body, keyIndex = 0) {
 
   const chat = model.startChat({
     history,
-    generationConfig: { temperature: 0.7, maxOutputTokens: 8192 },
+    generationConfig: { temperature: 0.7, maxOutputTokens: MAX_OUTPUT_TOKENS_CHAT },
     systemInstruction: systemPrompt,
   })
 
@@ -181,22 +215,30 @@ export async function smartRoute(req, res, body) {
     return res.status(200).json({ ...cached, _cached: true })
   }
 
-  // 3. Try ALL Groq keys
+  // Si des fichiers sont joints, Groq (llama-3.3, texte seul) ne peut pas les
+  // lire : il répondrait à côté en ignorant le fichier, et on aurait quand
+  // même consommé un appel pour rien. On va donc directement sur Gemini,
+  // seul capable de traiter les pièces jointes.
+  const hasFiles = body.files && body.files.length > 0
+
+  // 3. Try ALL Groq keys (texte uniquement)
   let groqError = null
-  for (let i = 0; i < GROQ_KEYS.length; i++) {
-    try {
-      const data = await callGroq(body, (currentGroqIndex + i) % GROQ_KEYS.length)
-      setCached(cacheKey, data)
-      return res.status(200).json(data)
-    } catch (err) {
-      groqError = err
-      if (isQuotaError(err)) continue
-      break // Autre erreur, on passe à Gemini
+  if (!hasFiles) {
+    for (let i = 0; i < GROQ_KEYS.length; i++) {
+      try {
+        const data = await callGroq(body, (currentGroqIndex + i) % GROQ_KEYS.length)
+        setCached(cacheKey, data)
+        return res.status(200).json(data)
+      } catch (err) {
+        groqError = err
+        if (isQuotaError(err)) continue
+        break // Autre erreur, on passe à Gemini
+      }
     }
   }
 
   // 4. Try ALL Gemini keys
-  console.log('[SmartRouter] Groq failed, trying Gemini. Last error:', groqError?.message)
+  if (!hasFiles) console.log('[SmartRouter] Groq failed, trying Gemini. Last error:', groqError?.message)
   let geminiError = null
   for (let i = 0; i < GEMINI_KEYS.length; i++) {
     try {
@@ -242,7 +284,8 @@ export async function smartRouteVision(req, res, body) {
             { text: body.prompt || 'Décris cette image en détail.' },
             { inlineData: { mimeType: body.mimeType || 'image/jpeg', data: body.imageBase64 } }
           ]
-        }]
+        }],
+        generationConfig: { maxOutputTokens: MAX_OUTPUT_TOKENS_MEDIA }
       })
 
       return res.status(200).json({ text: result.response.text() })
@@ -279,7 +322,8 @@ export async function smartRouteAudio(req, res, body) {
             { text: body.prompt || 'Transcris et analyse cet audio.' },
             { inlineData: { mimeType: body.mimeType || 'audio/mp3', data: body.audioBase64 } }
           ]
-        }]
+        }],
+        generationConfig: { maxOutputTokens: MAX_OUTPUT_TOKENS_MEDIA }
       })
 
       return res.status(200).json({ text: result.response.text() })
@@ -304,6 +348,12 @@ export async function smartRouteCode(req, res, body) {
   const cached = getCached(cacheKey)
   if (cached) return res.status(200).json({ ...cached, _cached: true })
 
+  // body.context (contexte du projet saisi côté UI) était reçu mais jamais
+  // utilisé : on l'injecte maintenant dans le prompt envoyé au modèle.
+  const userPrompt = body.context?.trim()
+    ? `Contexte du projet : ${body.context.trim()}\n\n${body.prompt}`
+    : body.prompt
+
   // Try ALL Groq keys
   for (let i = 0; i < GROQ_KEYS.length; i++) {
     try {
@@ -317,11 +367,11 @@ export async function smartRouteCode(req, res, body) {
       const chatCompletion = await groq.chat.completions.create({
         messages: [
           { role: 'system', content: systemPrompt },
-          { role: 'user', content: body.prompt }
+          { role: 'user', content: userPrompt }
         ],
         model: 'llama-3.3-70b-versatile',
         temperature: 0.2,
-        max_tokens: 8192,
+        max_tokens: MAX_OUTPUT_TOKENS_CODE,
       })
 
       const data = { text: chatCompletion.choices[0]?.message?.content || '' }
@@ -344,9 +394,9 @@ export async function smartRouteCode(req, res, body) {
         : 'Tu es un développeur senior. Génère du code production-ready avec commentaires.'
 
       const result = await model.generateContent({
-        contents: [{ role: 'user', parts: [{ text: body.prompt }] }],
+        contents: [{ role: 'user', parts: [{ text: userPrompt }] }],
         systemInstruction: systemPrompt,
-        generationConfig: { temperature: 0.2, maxOutputTokens: 8192 }
+        generationConfig: { temperature: 0.2, maxOutputTokens: MAX_OUTPUT_TOKENS_CODE }
       })
 
       const data = { text: result.response.text() }
