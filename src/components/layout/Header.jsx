@@ -28,13 +28,6 @@ export default function Header({ mode }) {
       <h1 className="font-display font-semibold text-sm md:text-base text-stone-800 truncate flex-1 md:flex-none">
         {mode}
       </h1>
-
-      <div className="ml-auto flex items-center gap-2 md:gap-3">
-        <div className="hidden sm:flex items-center gap-1.5 text-xs text-stone-400 font-mono">
-          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse-slow" />
-          IA active
-        </div>
-      </div>
     </header>
   )
 }

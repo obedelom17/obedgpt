@@ -58,7 +58,7 @@ const COLOR_CLASSES = {
   red:    { wrap: 'bg-red-50 border-red-200',       bar: 'bg-red-400',    text: 'text-red-800',   sub: 'text-red-600',    icon: 'text-red-400',    btn: 'text-red-700 hover:text-red-900' },
 }
 
-export function LoadingDots({ label = "L'IA réfléchit..." }) {
+export function LoadingDots({ label = "ObedGPT réfléchit..." }) {
   return (
     <div className="flex items-center gap-3 py-2 px-1">
       <div className="flex gap-1">

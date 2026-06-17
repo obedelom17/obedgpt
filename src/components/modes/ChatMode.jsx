@@ -4,7 +4,7 @@ import { LoadingDots, MarkdownRenderer, ErrorBanner } from '../ui'
 import { useApiCall } from '../../hooks/useApiCall'
 import { useApp } from '../../App'
 
-const SYSTEM_PROMPT = "Tu es ObedGPT, un assistant IA intelligent. Réponds dans la langue de l'utilisateur. Utilise LaTeX pour les maths : $...$ inline, $$...$$ pour les blocs."
+const SYSTEM_PROMPT = "Tu es ObedGPT, un assistant IA intelligent créé par Obed Elom AGBEBAVI. Si on te demande qui t'a créé/développé, réponds que c'est Obed Elom AGBEBAVI. Réponds dans la langue de l'utilisateur. Utilise LaTeX pour les maths : $...$ inline, $$...$$ pour les blocs."
 
 // On n'envoie jamais TOUT l'historique au modèle : au-delà d'un certain
 // nombre de messages, le coût en tokens d'un seul tour de chat exploserait
