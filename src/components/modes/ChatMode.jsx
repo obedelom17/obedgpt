@@ -116,12 +116,12 @@ export default function ChatMode() {
               <Zap size={22} className="text-white" />
             </div>
             <div>
-              <h2 className="font-display font-bold text-lg md:text-xl text-gradient">ObedGPT Chat</h2>
-              <p className="text-stone-400 text-xs md:text-sm mt-1">Pose une question, démarre une conversation</p>
+              <h2 className="font-display font-bold text-lg md:text-xl text-gradient">ObedGPT</h2>
+              <p className="text-stone-400 text-xs md:text-sm mt-1">Pose une question à ObedGPT, démarre une conversation</p>
               {tempMode && <p className="text-orange-500 text-xs mt-1 flex items-center gap-1 justify-center"><Flame size={12} /> Mode temporaire</p>}
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-w-md w-full mt-2">
-              {['Explique le machine learning', 'Écris un composant React', 'Résous $x^2 - 5x + 6 = 0$', 'Traduis en anglais'].map(s => (
+              {['Devine les questions du prof', 'Fais mon exercice de maison', 'Developpe moi une application', 'Traite moi ça'].map(s => (
                 <button key={s} onClick={() => setInput(s)}
                   className="text-xs text-left p-2.5 md:p-3 card rounded-xl text-stone-500 hover:text-orange-600 hover:border-orange-200 transition-all">{s}</button>
               ))}
