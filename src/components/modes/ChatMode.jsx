@@ -199,9 +199,6 @@ export default function ChatMode() {
           <button onClick={send} disabled={(!input.trim() && attachedFiles.length === 0) || loading} className="btn-primary p-2.5 md:p-3 flex-shrink-0">
             <Send size={15} /></button>
         </div>
-        <p className="text-[10px] text-stone-400 mt-1 text-center font-mono">
-          {messages.length} msg · contexte: {Math.min(messages.length, MAX_CONTEXT_MESSAGES)} · SmartRouter
-        </p>
       </div>
     </div>
   )

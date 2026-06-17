@@ -12,14 +12,19 @@
     color: #1C1917;
     -webkit-font-smoothing: antialiased;
     -webkit-tap-highlight-color: transparent;
+    transition: background-color 0.2s ease, color 0.2s ease;
   }
+  .dark body { background-color: #0c0a09; color: #F2EFEA; }
 
   ::-webkit-scrollbar       { width: 4px; height: 4px; }
   ::-webkit-scrollbar-track { background: transparent; }
   ::-webkit-scrollbar-thumb { background: #FED7AA; border-radius: 2px; }
   ::-webkit-scrollbar-thumb:hover { background: #EA580C; }
+  .dark ::-webkit-scrollbar-thumb { background: #44342A; }
+  .dark ::-webkit-scrollbar-thumb:hover { background: #F97316; }
 
   ::selection { background: rgba(234,88,12,0.15); color: #C2410C; }
+  .dark ::selection { background: rgba(249,115,22,0.3); color: #FFEDD5; }
 }
 
 @layer components {
@@ -28,6 +33,10 @@
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
     border: 1px solid rgba(253,232,208,0.9);
+  }
+  .dark .glass {
+    background: rgba(20,17,13,0.85);
+    border: 1px solid rgba(68,52,42,0.6);
   }
 
   .amber-gradient { background: linear-gradient(135deg, #F97316, #EA580C); }
@@ -63,6 +72,9 @@
     background-color: #fff7ed;
     border: 1px solid #fed7aa;
   }
+  .dark .mode-btn { color: #A39B8E; }
+  .dark .mode-btn:hover { color: #FB923C; background-color: rgba(249,115,22,0.1); }
+  .dark .mode-btn.active { color: #FB923C; background-color: rgba(249,115,22,0.12); border: 1px solid rgba(249,115,22,0.3); }
 
   .input-field {
     width: 100%;
@@ -83,6 +95,17 @@
   .input-field:focus {
     border-color: #fb923c;
     box-shadow: 0 0 0 2px rgba(251, 146, 60, 0.1);
+  }
+  .dark .input-field {
+    background-color: #1c1815;
+    border-color: rgba(249,115,22,0.25);
+    color: #F2EFEA;
+    box-shadow: none;
+  }
+  .dark .input-field::placeholder { color: #6B645A; }
+  .dark .input-field:focus {
+    border-color: #FB923C;
+    box-shadow: 0 0 0 2px rgba(251, 146, 60, 0.15);
   }
 
   .btn-primary {
@@ -136,12 +159,23 @@
     background-color: #fff7ed;
     border-color: #fed7aa;
   }
+  .dark .btn-ghost { color: #A39B8E; }
+  .dark .btn-ghost:hover {
+    color: #FB923C;
+    background-color: rgba(249,115,22,0.1);
+    border-color: rgba(249,115,22,0.25);
+  }
 
   .card {
     background-color: white;
     border: 1px solid #fed7aa;
     border-radius: 1rem;
     box-shadow: 0 2px 16px rgba(0,0,0,0.08), 0 0 0 1px rgba(253,232,208,0.8);
+  }
+  .dark .card {
+    background-color: #161310;
+    border-color: rgba(249,115,22,0.18);
+    box-shadow: 0 2px 16px rgba(0,0,0,0.4), 0 0 0 1px rgba(249,115,22,0.08);
   }
 
   .message-user {
@@ -158,6 +192,15 @@
     border-top-left-radius: 0.25rem;
     padding: 0.625rem 0.75rem;
     box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+  }
+  .dark .message-user {
+    background-color: rgba(249,115,22,0.1);
+    border-color: rgba(249,115,22,0.25);
+  }
+  .dark .message-ai {
+    background-color: #1c1815;
+    border-color: rgba(249,115,22,0.15);
+    box-shadow: none;
   }
 
   .tag {
@@ -182,6 +225,17 @@
     background-color: #ffedd5;
     border-color: #fb923c;
     color: #c2410c;
+  }
+  .dark .tag {
+    background-color: rgba(249,115,22,0.1);
+    color: #FB923C;
+    border-color: rgba(249,115,22,0.25);
+  }
+  .dark .tag:hover { background-color: rgba(249,115,22,0.18); }
+  .dark .tag.active-tag {
+    background-color: rgba(249,115,22,0.22);
+    border-color: #FB923C;
+    color: #FFD8A8;
   }
 }
 
@@ -250,8 +304,20 @@
 .prose-obedgpt td     { padding: 0.5em 0.75em; border: 1px solid #FDE8D0; color: #44403C; }
 .prose-obedgpt hr     { border: none; border-top: 1px solid #FDE8D0; margin: 1.5em 0; }
 
+.dark .prose-obedgpt { color: #C9C2B8; }
+.dark .prose-obedgpt h1, .dark .prose-obedgpt h2, .dark .prose-obedgpt h3 { color: #F5F1EC; }
+.dark .prose-obedgpt code { background: rgba(249,115,22,0.1); color: #FDBA74; border-color: rgba(249,115,22,0.25); }
+.dark .prose-obedgpt blockquote { border-left-color: #F97316; color: #A39B8E; }
+.dark .prose-obedgpt strong { color: #F5F1EC; }
+.dark .prose-obedgpt em, .dark .prose-obedgpt a { color: #FB923C; }
+.dark .prose-obedgpt th { background: rgba(249,115,22,0.1); color: #FB923C; border-color: rgba(249,115,22,0.2); }
+.dark .prose-obedgpt td { border-color: rgba(249,115,22,0.15); color: #C9C2B8; }
+.dark .prose-obedgpt hr { border-top-color: rgba(249,115,22,0.2); }
+
 .drop-zone { border: 2px dashed #FED7AA; border-radius: 1rem; transition: all 0.2s; background: #FFFBF7; }
 .drop-zone.drag-over { border-color: #EA580C; background: #FFF7ED; }
+.dark .drop-zone { border-color: rgba(249,115,22,0.3); background: #161310; }
+.dark .drop-zone.drag-over { border-color: #F97316; background: rgba(249,115,22,0.1); }
 
 @keyframes dot-bounce {
   0%, 80%, 100% { transform: translateY(0); }
@@ -267,6 +333,7 @@
   66%  { transform: translate(-20px,20px) scale(0.95); }
 }
 .orb { position: fixed; border-radius: 50%; filter: blur(80px); pointer-events: none; animation: orb-float 12s ease-in-out infinite; }
+.dark .orb { opacity: 0.5; }
 
 .syntax-wrapper { border-radius: 0.75rem; overflow: hidden; border: 1px solid #FDE8D0; margin: 0.75em 0; }
 .syntax-header {
@@ -275,11 +342,14 @@
   border-bottom: 1px solid #FDE8D0;
   font-family: 'JetBrains Mono', monospace; font-size: 0.75rem; color: #A8A29E;
 }
+.dark .syntax-wrapper { border-color: rgba(249,115,22,0.2); }
+.dark .syntax-header { background: #1c1815; border-bottom-color: rgba(249,115,22,0.2); color: #8A8276; }
 
 .sidebar-overlay {
   position: fixed; inset: 0; background: rgba(28,25,23,0.3);
   backdrop-filter: blur(2px); z-index: 15;
 }
+.dark .sidebar-overlay { background: rgba(0,0,0,0.55); }
 
 .katex { font-size: 1em !important; color: #1C1917; }
 
@@ -293,3 +363,62 @@
 .prose-obedgpt .katex-display .katex { color: #1C1917; font-size: 1.1em !important; }
 
 .katex-display > .katex { max-width: 100%; overflow-x: auto; overflow-y: hidden; }
+
+.dark .katex { color: #F2EFEA; }
+.dark .prose-obedgpt .katex { color: #FDBA74; }
+.dark .prose-obedgpt .katex-display { background: rgba(249,115,22,0.08); border-color: rgba(249,115,22,0.2); }
+.dark .prose-obedgpt .katex-display .katex { color: #F5F1EC; }
+
+/* ----------------------------------------------------------------
+   Mode sombre : classes utilitaires Tailwind utilisées directement
+   dans les composants (fonds, textes, bordures hors classes ci-dessus).
+   Centralisé ici pour ne pas dupliquer "dark:" partout dans chaque JSX.
+   ---------------------------------------------------------------- */
+.dark .bg-navy-900 { background-color: #0c0a09; }
+.dark .bg-stone-50 { background-color: #161310; }
+.dark .bg-white,
+.dark .bg-white\/90,
+.dark .bg-white\/60 { background-color: rgba(20,17,13,0.92); }
+
+.dark .text-stone-800 { color: #F5F1EC; }
+.dark .text-stone-700 { color: #E7E2DA; }
+.dark .text-stone-600 { color: #C9C2B8; }
+.dark .text-stone-500 { color: #A39B8E; }
+.dark .text-stone-400 { color: #8A8276; }
+.dark .text-stone-300 { color: #6B645A; }
+
+.dark .border-orange-50,
+.dark .border-orange-100,
+.dark .border-orange-200 { border-color: rgba(249,115,22,0.18); }
+
+.dark .bg-orange-50,
+.dark .bg-orange-50\/60 { background-color: rgba(249,115,22,0.1); }
+.dark .bg-orange-100,
+.dark .bg-orange-100\/60 { background-color: rgba(249,115,22,0.18); }
+.dark .bg-orange-200\/30 { background-color: rgba(249,115,22,0.12); }
+
+.dark .text-orange-300 { color: #FDBA74; }
+.dark .text-orange-400 { color: #FB923C; }
+.dark .text-orange-600,
+.dark .text-orange-700,
+.dark .text-orange-800,
+.dark .text-orange-900 { color: #FB923C; }
+
+.dark .bg-red-50,
+.dark .bg-red-100 { background-color: rgba(239,68,68,0.1); }
+.dark .border-red-200 { border-color: rgba(239,68,68,0.3); }
+.dark .text-red-600,
+.dark .text-red-700,
+.dark .text-red-800,
+.dark .text-red-900 { color: #F87171; }
+.dark .text-red-400,
+.dark .text-red-500 { color: #FCA5A5; }
+
+.dark .bg-amber-50 { background-color: rgba(245,158,11,0.1); }
+.dark .border-amber-200 { border-color: rgba(245,158,11,0.3); }
+.dark .text-amber-600,
+.dark .text-amber-700,
+.dark .text-amber-800,
+.dark .text-amber-900 { color: #FBBF24; }
+.dark .text-amber-400,
+.dark .text-amber-500 { color: #FCD34D; }

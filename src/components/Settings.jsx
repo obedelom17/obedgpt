@@ -1,35 +1,63 @@
 import { useState } from 'react'
-import { Settings as SettingsIcon, Zap, Trash2, User } from 'lucide-react'
+import { Zap, Trash2, User } from 'lucide-react'
 import { useApp } from '../App'
 
-const FEATURES = [
-  { mode: 'Chat',           model: 'LLaMA 3.3 70B / Gemini 2.5 Flash', desc: 'Conversation multi-tour, raisonnement avancé, LaTeX' },
-  { mode: 'Vision',         model: 'Gemini 2.5 Flash',                  desc: "Analyse et compréhension d'images" },
-  { mode: 'Audio',          model: 'Gemini 2.5 Flash',                  desc: 'Transcription et analyse audio' },
-  { mode: 'Code',           model: 'LLaMA 3.3 70B / Gemini 2.5 Flash', desc: 'Génération de code multi-langage' },
-  { mode: 'Text-to-Speech', model: 'Web Speech API (navigateur)',        desc: 'Synthèse vocale native' },
-]
+// Redimensionne l'image côté navigateur avant de la stocker : une photo de
+// 2MB devient quelques dizaines de Ko, ce qui évite de dépasser le quota du
+// localStorage (c'est ce qui faisait silencieusement échouer l'enregistrement
+// de l'avatar — l'erreur de quota n'était jamais affichée à l'utilisateur).
+function resizeImage(file, maxSize = 256) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onerror = () => reject(new Error('Impossible de lire ce fichier.'))
+    reader.onload = () => {
+      const img = new Image()
+      img.onerror = () => reject(new Error('Image invalide ou corrompue.'))
+      img.onload = () => {
+        const scale = Math.min(1, maxSize / Math.max(img.width, img.height))
+        const w = Math.round(img.width * scale)
+        const h = Math.round(img.height * scale)
+        const canvas = document.createElement('canvas')
+        canvas.width = w
+        canvas.height = h
+        canvas.getContext('2d').drawImage(img, 0, 0, w, h)
+        resolve(canvas.toDataURL('image/jpeg', 0.85))
+      }
+      img.src = reader.result
+    }
+    reader.readAsDataURL(file)
+  })
+}
 
 export default function Settings() {
   const { history, clearHistory } = useApp()
   const [avatar, setAvatar] = useState(() => localStorage.getItem('obedgpt-avatar') || '')
+  const [avatarError, setAvatarError] = useState(null)
 
-  const handleAvatarChange = (e) => {
+  const handleAvatarChange = async (e) => {
     const file = e.target.files[0]
+    e.target.value = '' // permet de re-sélectionner le même fichier après une erreur
     if (!file) return
-    if (file.size > 2 * 1024 * 1024) { alert('Image trop volumineuse (max 2MB)'); return }
-    const reader = new FileReader()
-    reader.onloadend = () => {
-      const base64 = reader.result
-      localStorage.setItem('obedgpt-avatar', base64)
-      setAvatar(base64)
+    setAvatarError(null)
+
+    if (!file.type.startsWith('image/')) { setAvatarError('Choisis un fichier image (JPG, PNG, WebP).'); return }
+    if (file.size > 8 * 1024 * 1024) { setAvatarError('Image trop volumineuse (max 8MB).'); return }
+
+    try {
+      const resized = await resizeImage(file)
+      localStorage.setItem('obedgpt-avatar', resized)
+      setAvatar(resized)
+    } catch (err) {
+      setAvatarError(err.message === 'QuotaExceededError' || err.name === 'QuotaExceededError'
+        ? "Plus assez d'espace de stockage local. Essaie une image plus simple."
+        : (err.message || "Impossible d'enregistrer cette photo."))
     }
-    reader.readAsDataURL(file)
   }
 
   const removeAvatar = () => {
     localStorage.removeItem('obedgpt-avatar')
     setAvatar('')
+    setAvatarError(null)
   }
 
   return (
@@ -38,27 +66,14 @@ export default function Settings() {
 
         {/* Header */}
         <div className="card p-4 md:p-6">
-          <div className="flex items-center gap-3 mb-4">
+          <div className="flex items-center gap-3">
             <div className="w-9 h-9 md:w-10 md:h-10 rounded-xl amber-gradient flex items-center justify-center flex-shrink-0">
               <Zap size={16} className="text-white" />
             </div>
             <div className="min-w-0">
               <h2 className="font-display font-bold text-stone-800 text-base md:text-lg">ObedGPT</h2>
-              <p className="text-xs text-stone-400">IA multi-modale · SmartRouter</p>
+              <p className="text-xs text-stone-400">IA multi-modale</p>
             </div>
-          </div>
-          <div className="grid grid-cols-2 gap-2 md:gap-3 text-center">
-            {[
-              { label: 'Modes actifs', value: '5' },
-              { label: 'Router',       value: 'Smart' },
-              { label: 'Vitesse',      value: 'Ultra' },
-              { label: 'Coût',         value: '0 €' },
-            ].map(({ label, value }) => (
-              <div key={label} className="bg-orange-50 rounded-xl p-2.5 md:p-3 border border-orange-100">
-                <div className="text-base md:text-lg font-display font-bold text-orange-500">{value}</div>
-                <div className="text-[10px] md:text-xs text-stone-400 mt-0.5">{label}</div>
-              </div>
-            ))}
           </div>
         </div>
 
@@ -88,7 +103,8 @@ export default function Settings() {
               )}
             </div>
           </div>
-          <p className="text-xs text-stone-400 mt-2">JPG, PNG, WebP — Max 2MB</p>
+          <p className="text-xs text-stone-400 mt-2">JPG, PNG, WebP — Max 8MB, redimensionnée automatiquement</p>
+          {avatarError && <p className="text-xs text-red-500 mt-1">{avatarError}</p>}
         </div>
 
         {/* History Management */}
@@ -108,34 +124,6 @@ export default function Settings() {
           </div>
         </div>
 
-        {/* Models table */}
-        <div className="card p-4 md:p-6 overflow-hidden">
-          <h3 className="font-display font-semibold text-stone-800 mb-3 md:mb-4 text-sm md:text-base">Modèles utilisés</h3>
-          <div className="overflow-x-auto -mx-4 px-4">
-            <table className="w-full text-xs md:text-sm min-w-[500px]">
-              <thead>
-                <tr className="border-b border-orange-100 text-stone-400 text-[10px] md:text-xs uppercase">
-                  <th className="text-left pb-2 pr-4">Mode</th>
-                  <th className="text-left pb-2 pr-4">Modèle</th>
-                  <th className="text-left pb-2">Description</th>
-                </tr>
-              </thead>
-              <tbody className="text-stone-600">
-                {FEATURES.map(f => (
-                  <tr key={f.mode} className="border-b border-orange-50">
-                    <td className="py-2 pr-4 font-medium">{f.mode}</td>
-                    <td className="py-2 pr-4 font-mono text-[10px] md:text-xs text-orange-600">{f.model}</td>
-                    <td className="py-2 text-[10px] md:text-xs">{f.desc}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        <p className="text-center text-xs text-stone-300 pb-4">
-          ObedGPT · SmartRouter (Groq + Gemini) · Gratuit
-        </p>
       </div>
     </div>
   )

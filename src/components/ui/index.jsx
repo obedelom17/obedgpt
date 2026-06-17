@@ -5,8 +5,9 @@ import remarkMath from 'remark-math'
 import rehypeRaw from 'rehype-raw'
 import rehypeKatex from 'rehype-katex'
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
-import { oneLight } from 'react-syntax-highlighter/dist/esm/styles/prism'
+import { oneLight, oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism'
 import { Copy, Check, Upload, X, File, AlertTriangle, Clock, WifiOff, KeyRound, FileX, Cpu } from 'lucide-react'
+import { useTheme } from '../../hooks/useTheme.jsx'
 
 export function classifyError(input) {
   if (!input) return null
@@ -41,9 +42,9 @@ export function classifyError(input) {
 const ERROR_CONFIG = {
   '429':    { icon: Clock,         color: 'amber',  title: 'Quota par minute dépassé',              body: 'Patiente quelques secondes puis réessaie automatiquement.', retryable: true },
   '503':    { icon: WifiOff,       color: 'orange', title: 'Service momentanément surchargé',    body: "Forte demande en ce moment. Réessaie automatique dans quelques secondes.", retryable: true },
-  'auth':   { icon: KeyRound,      color: 'red',    title: 'Clé API invalide',                   body: 'Vérifie GROQ_API_KEY et GEMINI_API_KEY dans Vercel → Settings → Environment Variables.', retryable: false },
+  'auth':   { icon: KeyRound,      color: 'red',    title: 'Clé API invalide',                   body: 'Vérifie la configuration des clés API dans Vercel → Settings → Environment Variables.', retryable: false },
   '413':    { icon: FileX,         color: 'red',    title: 'Fichier trop volumineux',            body: "Limite : ~25MB pour l'audio, ~10MB pour les images. Réduis la taille.", retryable: false },
-  'quota':  { icon: AlertTriangle, color: 'red',    title: 'Quota journalier atteint',           body: 'Limite gratuite atteinte. Réessaie demain ou consulte console.groq.com.', retryable: false },
+  'quota':  { icon: AlertTriangle, color: 'red',    title: 'Quota journalier atteint',           body: 'Limite gratuite atteinte. Réessaie demain.', retryable: false },
   'context':{ icon: Cpu,           color: 'amber',  title: 'Conversation trop longue',           body: 'Fenêtre de contexte dépassée. Commence une nouvelle conversation.', retryable: false },
   'network':{ icon: WifiOff,       color: 'red',    title: 'Erreur réseau',                      body: 'Vérifie ta connexion internet et réessaie.', retryable: true },
   '500':    { icon: AlertTriangle, color: 'red',    title: 'Erreur serveur interne',             body: 'Problème côté serveur. Réessaie dans quelques secondes.', retryable: true },
@@ -80,6 +81,7 @@ function CopyButton({ code }) {
 }
 
 export function MarkdownRenderer({ content }) {
+  const { theme } = useTheme()
   return (
     <div className="prose-obedgpt">
       <ReactMarkdown
@@ -97,8 +99,8 @@ export function MarkdownRenderer({ content }) {
                     <span>{lang || 'code'}</span>
                     <CopyButton code={code} />
                   </div>
-                  <SyntaxHighlighter style={oneLight} language={lang || 'text'} PreTag="div"
-                    customStyle={{ margin: 0, borderRadius: 0, background: '#FFFBF7', fontSize: '0.8rem', padding: '1rem' }}
+                  <SyntaxHighlighter style={theme === 'dark' ? oneDark : oneLight} language={lang || 'text'} PreTag="div"
+                    customStyle={{ margin: 0, borderRadius: 0, background: theme === 'dark' ? '#1c1815' : '#FFFBF7', fontSize: '0.8rem', padding: '1rem' }}
                     {...props}>{code}</SyntaxHighlighter>
                 </div>
               )

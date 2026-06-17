@@ -5,8 +5,29 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <title>ObedGPT — Interface IA Multi-Modal</title>
     <meta name="description" content="ObedGPT — Chat, Code, Web Search et plus. IA multi-modale gratuite." />
+
+    <!-- Détection du thème système avant le premier rendu : évite le
+         flash d'un thème incorrect (FOUC) au chargement de la page. -->
+    <script>
+      try {
+        if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+          document.documentElement.classList.add('dark')
+        }
+      } catch (e) {}
+    </script>
+
+    <!-- Icônes & PWA (installation sur ordinateur, iOS et Android) -->
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
-    <link rel="apple-touch-icon" href="/favicon.svg" />
+    <link rel="icon" href="/icon-192.png" sizes="192x192" type="image/png" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/manifest.json" />
+    <meta name="theme-color" media="(prefers-color-scheme: light)" content="#F97316" />
+    <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0c0a09" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="ObedGPT" />
+
     <meta property="og:type" content="website" />
     <meta property="og:url" content="https://obedgpt.vercel.app/" />
     <meta property="og:title" content="ObedGPT — Interface IA Multi-Modal" />
