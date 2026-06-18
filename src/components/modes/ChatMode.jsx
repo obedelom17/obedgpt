@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
-import { Send, RotateCcw, User, Zap, FileText, X, Paperclip, Image as ImageIcon, Flame } from 'lucide-react'
+import { Send, RotateCcw, User, Zap, FileText, X, Paperclip, Image as ImageIcon, Flame, Mic, RefreshCw } from 'lucide-react'
 import { LoadingDots, MarkdownRenderer, ErrorBanner } from '../ui'
-import { useApiCall } from '../../hooks/useApiCall'
+import { useStreamingChat } from '../../hooks/useApiCall'
 import { useApp } from '../../App'
 
 const SYSTEM_PROMPT = "Tu es ObedGPT, un assistant IA intelligent créé par Obed Elom AGBEBAVI. Si on te demande qui t'a créé/développé, réponds que c'est Obed Elom AGBEBAVI. Réponds dans la langue de l'utilisateur. Utilise LaTeX pour les maths : $...$ inline, $$...$$ pour les blocs."
@@ -31,10 +31,11 @@ export default function ChatMode() {
   const [input, setInput]           = useState('')
   const [systemPrompt] = useState(SYSTEM_PROMPT)
   const [attachedFiles, setAttachedFiles] = useState([])
-  const { loading, error, call, retry, clearError } = useApiCall()
+  const [listening, setListening] = useState(false)
+  const { loading, error, call, retry, clearError } = useStreamingChat()
   const bottomRef  = useRef(null)
-  const lastMsgs   = useRef([])
   const fileInputRef = useRef(null)
+  const recognitionRef = useRef(null)
 
   // Auto-save non-temp conversations
   useEffect(() => {
@@ -48,6 +49,10 @@ export default function ChatMode() {
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages, loading])
+
+  // Coupe proprement la dictée vocale si le composant est démonté en plein
+  // enregistrement (changement de mode pendant qu'on dicte).
+  useEffect(() => () => recognitionRef.current?.stop(), [])
 
   const isImage = (type) => type.startsWith('image/')
 
@@ -77,6 +82,47 @@ export default function ChatMode() {
     reader.readAsDataURL(file)
   })
 
+  // Dictée vocale : Web Speech API, déjà utilisée pour la synthèse (TTS) côté
+  // navigateur, ici dans l'autre sens (micro -> texte).
+  const toggleDictation = () => {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition
+    if (!SpeechRecognition) { alert('La dictée vocale n\'est pas supportée par ce navigateur.'); return }
+
+    if (listening) { recognitionRef.current?.stop(); return }
+
+    const recognition = new SpeechRecognition()
+    recognition.lang = 'fr-FR'
+    recognition.interimResults = false
+    recognition.continuous = false
+    recognition.onresult = (e) => {
+      const transcript = Array.from(e.results).map(r => r[0].transcript).join(' ').trim()
+      if (transcript) setInput(prev => (prev ? prev + ' ' : '') + transcript)
+    }
+    recognition.onerror = () => setListening(false)
+    recognition.onend = () => setListening(false)
+    recognitionRef.current = recognition
+    recognition.start()
+    setListening(true)
+  }
+
+  // Ajoute un message assistant vide puis le remplit morceau par morceau au
+  // fil du streaming. En cas d'échec, on retire ce message vide (l'erreur
+  // s'affiche déjà via le bandeau ErrorBanner).
+  const appendAssistantStreamed = async (apiCallFn) => {
+    setMessages(prev => [...prev, { role: 'assistant', content: '' }])
+    const onChunk = (delta) => {
+      setMessages(prev => {
+        const next = [...prev]
+        const last = next[next.length - 1]
+        next[next.length - 1] = { ...last, content: last.content + delta }
+        return next
+      })
+    }
+    const data = await apiCallFn(onChunk)
+    if (!data) setMessages(prev => prev.slice(0, -1))
+    return data
+  }
+
   const send = async () => {
     const text = input.trim()
     if ((!text && attachedFiles.length === 0) || loading) return
@@ -91,20 +137,32 @@ export default function ChatMode() {
     setMessages(newMessages)
     setInput('')
     setAttachedFiles([])
-    lastMsgs.current = newMessages
 
     const contextWindow = newMessages.slice(-MAX_CONTEXT_MESSAGES)
-    const data = await call('/api/chat', { messages: contextWindow, systemPrompt, files: fileData })
-    if (data) setMessages(prev => [...prev, { role: 'assistant', content: data.text }])
+    await appendAssistantStreamed(onChunk => call('/api/chat', { messages: contextWindow, systemPrompt, files: fileData }, onChunk))
   }
 
   const handleRetry = async () => {
-    const data = await retry()
-    if (data) setMessages(prev => [...prev, { role: 'assistant', content: data.text }])
+    await appendAssistantStreamed(onChunk => retry(onChunk))
+  }
+
+  // Régénère la dernière réponse de l'assistant : on retire les messages
+  // assistant en fin de conversation puis on renvoie le même contexte.
+  const regenerate = async () => {
+    if (loading) return
+    let end = messages.length
+    while (end > 0 && messages[end - 1].role === 'assistant') end--
+    const trimmed = messages.slice(0, end)
+    if (trimmed.length === 0) return
+    setMessages(trimmed)
+    const contextWindow = trimmed.slice(-MAX_CONTEXT_MESSAGES)
+    await appendAssistantStreamed(onChunk => call('/api/chat', { messages: contextWindow, systemPrompt, files: [] }, onChunk))
   }
 
   const onKeyDown = e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send() } }
   const reset = () => { setMessages([]); clearError(); setAttachedFiles([]) }
+
+  const lastIsAssistant = messages.length > 0 && messages[messages.length - 1].role === 'assistant' && !loading
 
   return (
     <div className="flex flex-col h-full bg-navy-900">
@@ -129,32 +187,38 @@ export default function ChatMode() {
           </div>
         )}
 
-        {messages.map((msg, i) => (
-          <div key={i} className={`flex gap-2 md:gap-3 animate-slide-up ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-            {msg.role === 'assistant' && (
-              <div className="w-6 h-6 md:w-7 md:h-7 rounded-lg amber-gradient flex items-center justify-center flex-shrink-0 mt-0.5">
-                <Zap size={10} className="text-white" /></div>
-            )}
-            <div className={`max-w-[85%] sm:max-w-[75%] ${msg.role === 'user' ? 'message-user' : 'message-ai'}`}>
-              {msg.role === 'user' 
-                ? <p className="text-xs md:text-sm text-stone-800 break-words">{msg.content}</p> 
-                : <MarkdownRenderer content={msg.content} />
-              }
+        {messages.map((msg, i) => {
+          const isLast = i === messages.length - 1
+          return (
+            <div key={i} className={`flex gap-2 md:gap-3 animate-slide-up ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+              {msg.role === 'assistant' && (
+                <div className="w-6 h-6 md:w-7 md:h-7 rounded-lg amber-gradient flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <Zap size={10} className="text-white" /></div>
+              )}
+              <div className="max-w-[85%] sm:max-w-[75%]">
+                <div className={msg.role === 'user' ? 'message-user' : 'message-ai'}>
+                  {msg.role === 'user'
+                    ? <p className="text-xs md:text-sm text-stone-800 break-words">{msg.content}</p>
+                    : (msg.content
+                        ? <MarkdownRenderer content={msg.content} />
+                        : <LoadingDots />)
+                  }
+                </div>
+                {msg.role === 'assistant' && isLast && lastIsAssistant && msg.content && (
+                  <button onClick={regenerate} aria-label="Régénérer cette réponse"
+                    className="flex items-center gap-1 text-[10px] text-stone-400 hover:text-orange-500 mt-1 transition-colors">
+                    <RefreshCw size={11} /> Régénérer
+                  </button>
+                )}
+              </div>
+              {msg.role === 'user' && (
+                <div className="w-6 h-6 md:w-7 md:h-7 rounded-lg bg-orange-50 border border-orange-200 flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <User size={10} className="text-orange-400" /></div>
+              )}
             </div>
-            {msg.role === 'user' && (
-              <div className="w-6 h-6 md:w-7 md:h-7 rounded-lg bg-orange-50 border border-orange-200 flex items-center justify-center flex-shrink-0 mt-0.5">
-                <User size={10} className="text-orange-400" /></div>
-            )}
-          </div>
-        ))}
+          )
+        })}
 
-        {loading && (
-          <div className="flex gap-2 md:gap-3">
-            <div className="w-6 h-6 md:w-7 md:h-7 rounded-lg amber-gradient flex items-center justify-center flex-shrink-0 mt-0.5">
-              <Zap size={10} className="text-white" /></div>
-            <div className="message-ai"><LoadingDots /></div>
-          </div>
-        )}
         <div ref={bottomRef} />
       </div>
 
@@ -171,7 +235,7 @@ export default function ChatMode() {
             <div key={i} className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-orange-50 border border-orange-200 text-xs text-orange-700">
               {isImage(file.type) ? <ImageIcon size={12} /> : <FileText size={12} />}
               <span className="max-w-[100px] md:max-w-[120px] truncate">{file.name}</span>
-              <button onClick={() => removeFile(i)} className="hover:text-red-500"><X size={12} /></button>
+              <button onClick={() => removeFile(i)} aria-label={`Retirer ${file.name}`} className="hover:text-red-500"><X size={12} /></button>
             </div>
           ))}
         </div>
@@ -181,22 +245,31 @@ export default function ChatMode() {
       <div className="px-3 md:px-4 pb-3 md:pb-4 pt-2 border-t border-orange-100 bg-white/60 safe-bottom">
         <div className="flex gap-2 items-end">
           {messages.length > 0 && (
-            <button onClick={reset} className="btn-ghost p-2 md:p-2.5 flex-shrink-0 hidden sm:flex" title="Nouvelle conversation"><RotateCcw size={15} /></button>
+            <button onClick={reset} aria-label="Nouvelle conversation" title="Nouvelle conversation"
+              className="btn-ghost p-2 md:p-2.5 flex-shrink-0 hidden sm:flex"><RotateCcw size={15} /></button>
           )}
           <input type="file" ref={fileInputRef} onChange={handleFileSelect} multiple
             accept="image/*,.pdf,.txt,.csv,.json,.doc,.docx"
-            className="hidden" />
-          <button onClick={() => fileInputRef.current?.click()} className="btn-ghost p-2 md:p-2.5 flex-shrink-0" title="Joindre un fichier">
+            className="hidden" aria-hidden="true" />
+          <button onClick={() => fileInputRef.current?.click()} aria-label="Joindre un fichier" title="Joindre un fichier"
+            className="btn-ghost p-2 md:p-2.5 flex-shrink-0">
             <Paperclip size={15} />
+          </button>
+          <button onClick={toggleDictation} title={listening ? 'Arrêter la dictée' : 'Dicter un message'}
+            aria-label={listening ? 'Arrêter la dictée vocale' : 'Démarrer la dictée vocale'} aria-pressed={listening}
+            className={`p-2 md:p-2.5 flex-shrink-0 rounded-xl transition-all ${listening ? 'bg-red-50 text-red-500 border border-red-200 animate-pulse' : 'btn-ghost'}`}>
+            <Mic size={15} />
           </button>
           <textarea value={input} onChange={e => setInput(e.target.value)} onKeyDown={onKeyDown}
             rows={1} disabled={loading}
             placeholder="Message..."
+            aria-label="Message à envoyer"
             className="input-field resize-none flex-1 text-sm"
             style={{ minHeight: '40px', maxHeight: '120px' }}
             onInput={e => { e.target.style.height = 'auto'; e.target.style.height = Math.min(e.target.scrollHeight, 120) + 'px' }}
           />
-          <button onClick={send} disabled={(!input.trim() && attachedFiles.length === 0) || loading} className="btn-primary p-2.5 md:p-3 flex-shrink-0">
+          <button onClick={send} disabled={(!input.trim() && attachedFiles.length === 0) || loading} aria-label="Envoyer le message"
+            className="btn-primary p-2.5 md:p-3 flex-shrink-0">
             <Send size={15} /></button>
         </div>
       </div>

@@ -85,7 +85,7 @@ export default function TTSMode() {
             <input value={aiPrompt} onChange={e => setAiPrompt(e.target.value)}
               placeholder="Sujet... (ex: l'histoire de l'Afrique de l'Ouest)"
               className="input-field flex-1" onKeyDown={e => e.key === 'Enter' && generateText()} />
-            <button onClick={generateText} disabled={!aiPrompt.trim() || loading} className="btn-primary"><Wand2 size={15} /></button>
+            <button onClick={generateText} disabled={!aiPrompt.trim() || loading} aria-label="Générer le texte avec l'IA" className="btn-primary"><Wand2 size={15} /></button>
           </div>
           {loading && <LoadingDots label="Génération du texte..." />}
         </div>

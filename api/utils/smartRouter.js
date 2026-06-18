@@ -195,6 +195,103 @@ function isQuotaError(err) {
     || msg.includes('exhausted') || msg.includes('resource') || msg.includes('too many')
 }
 
+// ─── Streaming (chat uniquement) ───
+// Principe : on n'envoie les en-têtes HTTP / on ne commence à écrire dans la
+// réponse qu'une fois qu'on a la certitude qu'un provider répond (le flux
+// est ouvert sans erreur). Tant qu'aucun octet n'a été écrit, on peut encore
+// basculer Groq → Gemini comme dans la version non-streamée. Une fois le
+// premier morceau de texte écrit, on s'engage : si ce provider échoue en
+// cours de route (rare), on arrête simplement le flux plutôt que de essayer
+// d'en changer (impossible côté HTTP une fois la réponse commencée).
+async function streamGroq(body, res, markStarted) {
+  for (let i = 0; i < GROQ_KEYS.length; i++) {
+    const keyIndex = (currentGroqIndex + i) % GROQ_KEYS.length
+    const key = GROQ_KEYS[keyIndex]
+    try {
+      const groq = new Groq({ apiKey: key })
+      const messages = (body.messages || []).slice(-MAX_HISTORY_MESSAGES)
+      const stream = await groq.chat.completions.create({
+        messages: body.systemPrompt
+          ? [{ role: 'system', content: body.systemPrompt }, ...messages]
+          : messages,
+        model: 'llama-3.3-70b-versatile',
+        temperature: 0.7,
+        max_tokens: MAX_OUTPUT_TOKENS_CHAT,
+        stream: true,
+      })
+
+      res.writeHead(200, {
+        'Content-Type': 'text/plain; charset=utf-8',
+        'Cache-Control': 'no-cache',
+        'X-Accel-Buffering': 'no',
+      })
+      markStarted()
+      let full = ''
+      for await (const part of stream) {
+        const delta = part.choices?.[0]?.delta?.content || ''
+        if (delta) { full += delta; res.write(delta) }
+      }
+      res.end()
+      return full
+    } catch (err) {
+      if (isQuotaError(err)) continue
+      throw err
+    }
+  }
+  throw new Error('NO_GROQ_KEYS')
+}
+
+async function streamGemini(body, res, markStarted) {
+  for (let i = 0; i < GEMINI_KEYS.length; i++) {
+    const keyIndex = (currentGeminiIndex + i) % GEMINI_KEYS.length
+    const key = GEMINI_KEYS[keyIndex]
+    try {
+      const genAI = new GoogleGenerativeAI(key)
+      const model = genAI.getGenerativeModel({ model: FALLBACK_MODEL })
+
+      const messages = (body.messages || []).slice(-MAX_HISTORY_MESSAGES)
+      const history = []
+      for (let j = 0; j < messages.length - 1; j++) {
+        const msg = messages[j]
+        history.push({ role: msg.role === 'user' ? 'user' : 'model', parts: [{ text: msg.content }] })
+      }
+      const lastMsg = messages[messages.length - 1]
+      let parts = [{ text: lastMsg?.content || '' }]
+      if (body.files && body.files.length > 0) {
+        for (const file of body.files) {
+          parts.push({ inlineData: { mimeType: file.type || 'application/pdf', data: file.base64 } })
+        }
+      }
+
+      const chat = model.startChat({
+        history,
+        generationConfig: { temperature: 0.7, maxOutputTokens: MAX_OUTPUT_TOKENS_CHAT },
+        systemInstruction: body.systemPrompt,
+      })
+
+      const result = await chat.sendMessageStream(parts)
+
+      res.writeHead(200, {
+        'Content-Type': 'text/plain; charset=utf-8',
+        'Cache-Control': 'no-cache',
+        'X-Accel-Buffering': 'no',
+      })
+      markStarted()
+      let full = ''
+      for await (const chunk of result.stream) {
+        const delta = chunk.text()
+        if (delta) { full += delta; res.write(delta) }
+      }
+      res.end()
+      return full
+    } catch (err) {
+      if (isQuotaError(err)) continue
+      throw err
+    }
+  }
+  throw new Error('NO_GEMINI_KEYS')
+}
+
 // ─── Main Router ───
 export async function smartRoute(req, res, body) {
   // 1. Rate Limit
@@ -208,6 +305,35 @@ export async function smartRoute(req, res, body) {
     })
   }
 
+  const hasFiles = body.files && body.files.length > 0
+
+  // ─── Mode streaming (chat texte, avec ou sans pièce jointe) ───
+  if (body.stream) {
+    let started = false
+    const markStarted = () => { started = true }
+    try {
+      if (!hasFiles) {
+        try {
+          const full = await streamGroq(body, res, markStarted)
+          setCached(getCacheKey(body), { text: full })
+          return
+        } catch (err) {
+          if (started) return // déjà engagés sur ce flux, on s'arrête là
+          // sinon : on n'a encore rien écrit, on peut basculer sur Gemini
+        }
+      }
+      const full = await streamGemini(body, res, markStarted)
+      setCached(getCacheKey(body), { text: full })
+      return
+    } catch (err) {
+      if (started) { try { res.end() } catch {} ; return }
+      return res.status(503).json({
+        error: 'Tous les services sont temporairement indisponibles. Réessayez dans quelques minutes.',
+        type: 'ALL_SERVICES_DOWN'
+      })
+    }
+  }
+
   // 2. Cache Check
   const cacheKey = getCacheKey(body)
   const cached = getCached(cacheKey)
@@ -219,7 +345,6 @@ export async function smartRoute(req, res, body) {
   // lire : il répondrait à côté en ignorant le fichier, et on aurait quand
   // même consommé un appel pour rien. On va donc directement sur Gemini,
   // seul capable de traiter les pièces jointes.
-  const hasFiles = body.files && body.files.length > 0
 
   // 3. Try ALL Groq keys (texte uniquement)
   let groqError = null

@@ -60,7 +60,7 @@ export default function CodeMode() {
               placeholder={`Décris le code ${language} à générer...`}
               className="input-field flex-1 resize-none"
               onKeyDown={e => { if (e.key === 'Enter' && e.ctrlKey) generate() }} />
-            <button onClick={generate} disabled={!prompt.trim() || loading} className="btn-primary self-end"><Send size={15} /></button>
+            <button onClick={generate} disabled={!prompt.trim() || loading} aria-label="Générer le code" className="btn-primary self-end"><Send size={15} /></button>
           </div>
           <p className="text-[10px] text-stone-400">Ctrl+Entrée pour générer</p>
         </div>

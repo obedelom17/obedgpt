@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { Zap, Trash2, User } from 'lucide-react'
+import { useState, useRef } from 'react'
+import { Zap, Trash2, User, Download, Upload } from 'lucide-react'
 import { useApp } from '../App'
 
 // Redimensionne l'image côté navigateur avant de la stocker : une photo de
@@ -30,9 +30,39 @@ function resizeImage(file, maxSize = 256) {
 }
 
 export default function Settings() {
-  const { history, clearHistory } = useApp()
+  const { history, clearHistory, importHistory } = useApp()
   const [avatar, setAvatar] = useState(() => localStorage.getItem('obedgpt-avatar') || '')
   const [avatarError, setAvatarError] = useState(null)
+  const [importMessage, setImportMessage] = useState(null)
+  const importInputRef = useRef(null)
+
+  const exportHistory = () => {
+    const blob = new Blob([JSON.stringify(history, null, 2)], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `obedgpt-historique-${new Date().toISOString().slice(0, 10)}.json`
+    document.body.appendChild(a)
+    a.click()
+    a.remove()
+    URL.revokeObjectURL(url)
+  }
+
+  const handleImportFile = async (e) => {
+    const file = e.target.files[0]
+    e.target.value = ''
+    if (!file) return
+    setImportMessage(null)
+    try {
+      const text = await file.text()
+      const parsed = JSON.parse(text)
+      const before = history.length
+      importHistory(parsed)
+      setImportMessage({ type: 'ok', text: `Import réussi (fusionné avec ${before} conversation${before !== 1 ? 's' : ''} existante${before !== 1 ? 's' : ''}).` })
+    } catch (err) {
+      setImportMessage({ type: 'error', text: err.message?.includes('JSON') ? "Fichier invalide : ce n'est pas un export ObedGPT valide (.json)." : (err.message || "Import impossible.") })
+    }
+  }
 
   const handleAvatarChange = async (e) => {
     const file = e.target.files[0]
@@ -117,11 +147,25 @@ export default function Settings() {
               <div className="text-sm font-medium text-stone-700">Conversations sauvegardées</div>
               <div className="text-xs text-stone-400">{history.length} conversation{history.length !== 1 ? 's' : ''}</div>
             </div>
-            <button onClick={clearHistory}
-              className="px-3 py-2 rounded-lg bg-red-50 border border-red-200 text-red-600 text-sm hover:bg-red-100 transition-colors w-full sm:w-auto">
-              Tout effacer
-            </button>
+            <div className="flex gap-2 flex-wrap w-full sm:w-auto">
+              <button onClick={exportHistory} disabled={history.length === 0} aria-label="Exporter l'historique en JSON"
+                className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-orange-50 border border-orange-200 text-orange-600 text-sm hover:bg-orange-100 transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
+                <Download size={14} /> Exporter
+              </button>
+              <label className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-orange-50 border border-orange-200 text-orange-600 text-sm cursor-pointer hover:bg-orange-100 transition-colors">
+                <input ref={importInputRef} type="file" accept="application/json,.json" onChange={handleImportFile} className="hidden" aria-label="Importer un historique JSON" />
+                <Upload size={14} /> Importer
+              </label>
+              <button onClick={clearHistory} aria-label="Effacer tout l'historique"
+                className="px-3 py-2 rounded-lg bg-red-50 border border-red-200 text-red-600 text-sm hover:bg-red-100 transition-colors">
+                Tout effacer
+              </button>
+            </div>
           </div>
+          {importMessage && (
+            <p className={`text-xs mt-2 ${importMessage.type === 'ok' ? 'text-orange-600' : 'text-red-500'}`}>{importMessage.text}</p>
+          )}
+          <p className="text-xs text-stone-400 mt-2">L'export te permet de garder une copie de tes conversations (elles ne vivent que dans ce navigateur) et de les retrouver sur un autre appareil via "Importer".</p>
         </div>
 
       </div>

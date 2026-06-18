@@ -73,6 +73,7 @@ export default function App() {
     deleteConversation: historyManager.deleteConversation,
     renameConversation: historyManager.renameConversation,
     clearHistory: historyManager.clearHistory,
+    importHistory: historyManager.importHistory,
   }
 
   return (
@@ -80,8 +81,8 @@ export default function App() {
       <AppContext.Provider value={contextValue}>
         <div className="flex app-height w-screen overflow-hidden bg-navy-900 relative">
           {/* Background orbs - hidden on mobile */}
-          <div className="hidden md:block orb w-96 h-96 bg-orange-100/60 top-[-10%] left-[-5%]" style={{ animationDelay: '0s' }} />
-          <div className="hidden md:block orb w-80 h-80 bg-orange-200/30 bottom-[-5%] right-[10%]" style={{ animationDelay: '-4s' }} />
+          <div aria-hidden="true" className="hidden md:block orb w-96 h-96 bg-orange-100/60 top-[-10%] left-[-5%]" style={{ animationDelay: '0s' }} />
+          <div aria-hidden="true" className="hidden md:block orb w-80 h-80 bg-orange-200/30 bottom-[-5%] right-[10%]" style={{ animationDelay: '-4s' }} />
 
           <Sidebar />
 

@@ -28,6 +28,7 @@ function ConversationItem({ conv, active, onOpen, onRename, onDelete }) {
         onClick={(e) => { e.stopPropagation(); onRename() }}
         className="opacity-0 group-hover:opacity-100 text-stone-400 hover:text-orange-500 flex-shrink-0 transition-opacity"
         title="Renommer"
+        aria-label={`Renommer "${conv.title || 'Sans titre'}"`}
       >
         <Pencil size={12} />
       </button>
@@ -35,6 +36,7 @@ function ConversationItem({ conv, active, onOpen, onRename, onDelete }) {
         onClick={(e) => { e.stopPropagation(); onDelete() }}
         className="opacity-0 group-hover:opacity-100 text-stone-400 hover:text-red-500 flex-shrink-0 transition-opacity"
         title="Supprimer"
+        aria-label={`Supprimer "${conv.title || 'Sans titre'}"`}
       >
         <Trash2 size={12} />
       </button>
@@ -136,7 +138,7 @@ export default function Sidebar() {
       >
         <div className="px-3 mb-2 flex items-center justify-between">
           <span className="font-display font-bold text-gradient text-sm">ObedGPT</span>
-          <button onClick={() => setSidebarOpen(false)} className="text-stone-400 hover:text-stone-600">
+          <button onClick={() => setSidebarOpen(false)} aria-label="Fermer le menu" className="text-stone-400 hover:text-stone-600">
             <X size={18} />
           </button>
         </div>

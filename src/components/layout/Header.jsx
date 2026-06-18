@@ -12,6 +12,7 @@ export default function Header({ mode }) {
         onClick={() => setSidebarOpen(true)}
         className="md:hidden btn-ghost p-2 flex-shrink-0"
         title="Menu"
+        aria-label="Ouvrir le menu"
       >
         <Menu size={18} />
       </button>
@@ -21,6 +22,7 @@ export default function Header({ mode }) {
         onClick={startNewChat}
         className="md:hidden btn-primary p-2 flex-shrink-0"
         title="Nouveau chat"
+        aria-label="Nouveau chat"
       >
         <Plus size={16} />
       </button>

@@ -74,6 +74,7 @@ function CopyButton({ code }) {
   const [copied, setCopied] = useState(false)
   return (
     <button onClick={() => { navigator.clipboard.writeText(code); setCopied(true); setTimeout(() => setCopied(false), 2000) }}
+      aria-label={copied ? 'Code copié' : 'Copier le code'}
       className="text-stone-400 hover:text-orange-500 transition-colors">
       {copied ? <Check size={13} /> : <Copy size={13} />}
     </button>
@@ -160,7 +161,7 @@ export function ErrorBanner({ error, onDismiss, onRetry }) {
           </button>
         )}
       </div>
-      <button onClick={onDismiss} className="flex-shrink-0 text-stone-400 hover:text-stone-600 transition-colors mt-0.5">
+      <button onClick={onDismiss} aria-label="Fermer ce message" className="flex-shrink-0 text-stone-400 hover:text-stone-600 transition-colors mt-0.5">
         <X size={14} />
       </button>
     </div>
@@ -194,7 +195,7 @@ export function FileUploadZone({ onFile, accept, label, hint, maxSizeMB = 10, cu
             <div className="text-sm text-stone-800 truncate font-medium">{currentFile.name}</div>
             <div className="text-xs text-stone-400 mt-0.5">{(currentFile.file.size / 1024).toFixed(0)} KB · {currentFile.mimeType}</div>
           </div>
-          <button onClick={() => onFile(null)} className="text-stone-400 hover:text-red-400 transition-colors"><X size={16} /></button>
+          <button onClick={() => onFile(null)} aria-label="Retirer le fichier" className="text-stone-400 hover:text-red-400 transition-colors"><X size={16} /></button>
         </div>
       ) : (
         <label onDragOver={e => { e.preventDefault(); setDragging(true) }} onDragLeave={() => setDragging(false)} onDrop={onDrop}

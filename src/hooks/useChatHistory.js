@@ -48,7 +48,20 @@ export function useChatHistory() {
     setHistory([])
   }, [])
 
+  // Fusionne un historique importé (export JSON précédent) avec l'existant :
+  // les conversations dont l'id existe déjà ne sont pas dupliquées.
+  const importHistory = useCallback((imported) => {
+    if (!Array.isArray(imported)) throw new Error('Format invalide : un tableau de conversations était attendu.')
+    setHistory(prev => {
+      const existingIds = new Set(prev.map(c => c.id))
+      const additions = imported.filter(c => c && c.id && Array.isArray(c.messages) && !existingIds.has(c.id))
+      const merged = [...additions, ...prev]
+      merged.sort((a, b) => new Date(b.updatedAt || b.createdAt || 0) - new Date(a.updatedAt || a.createdAt || 0))
+      return merged.slice(0, MAX_STORED_CONVERSATIONS)
+    })
+  }, [])
+
   const createNewId = useCallback(() => generateId(), [])
 
-  return { history, saveConversation, deleteConversation, renameConversation, clearHistory, createNewId }
+  return { history, saveConversation, deleteConversation, renameConversation, clearHistory, importHistory, createNewId }
 }
