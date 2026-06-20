@@ -44,6 +44,10 @@ export function useChatHistory() {
     setHistory(prev => prev.map(c => c.id === id ? { ...c, title } : c))
   }, [])
 
+  const togglePin = useCallback((id) => {
+    setHistory(prev => prev.map(c => c.id === id ? { ...c, pinned: !c.pinned } : c))
+  }, [])
+
   const clearHistory = useCallback(() => {
     setHistory([])
   }, [])
@@ -63,5 +67,5 @@ export function useChatHistory() {
 
   const createNewId = useCallback(() => generateId(), [])
 
-  return { history, saveConversation, deleteConversation, renameConversation, clearHistory, importHistory, createNewId }
+  return { history, saveConversation, deleteConversation, renameConversation, togglePin, clearHistory, importHistory, createNewId }
 }

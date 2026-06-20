@@ -1,7 +1,7 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import {
   Plus, MessageSquare, Eye, Mic, Code2, Volume2, Settings as SettingsIcon,
-  Trash2, Pencil, Flame, X, MessagesSquare
+  Trash2, Pencil, Flame, X, MessagesSquare, Search, Star
 } from 'lucide-react'
 import { useApp } from '../../App'
 
@@ -14,7 +14,7 @@ const NAV_ITEMS = [
   { key: 'settings', label: 'Paramètres',      icon: SettingsIcon },
 ]
 
-function ConversationItem({ conv, active, onOpen, onRename, onDelete }) {
+function ConversationItem({ conv, active, onOpen, onRename, onDelete, onTogglePin }) {
   return (
     <div
       onClick={onOpen}
@@ -24,6 +24,15 @@ function ConversationItem({ conv, active, onOpen, onRename, onDelete }) {
     >
       <MessagesSquare size={13} className="flex-shrink-0 opacity-70" />
       <span className="flex-1 min-w-0 truncate">{conv.title || 'Sans titre'}</span>
+      <button
+        onClick={(e) => { e.stopPropagation(); onTogglePin() }}
+        className={`flex-shrink-0 transition-opacity ${conv.pinned ? 'text-orange-400 opacity-100' : 'text-stone-400 opacity-0 group-hover:opacity-100 hover:text-orange-500'}`}
+        title={conv.pinned ? 'Désépingler' : 'Épingler'}
+        aria-label={conv.pinned ? `Désépingler "${conv.title || 'Sans titre'}"` : `Épingler "${conv.title || 'Sans titre'}"`}
+        aria-pressed={!!conv.pinned}
+      >
+        <Star size={12} fill={conv.pinned ? 'currentColor' : 'none'} />
+      </button>
       <button
         onClick={(e) => { e.stopPropagation(); onRename() }}
         className="opacity-0 group-hover:opacity-100 text-stone-400 hover:text-orange-500 flex-shrink-0 transition-opacity"
@@ -47,8 +56,21 @@ function ConversationItem({ conv, active, onOpen, onRename, onDelete }) {
 function SidebarContent() {
   const {
     activeMode, setActiveMode, activeChatId, startNewChat, openConversation,
-    tempMode, setTempMode, history, deleteConversation, renameConversation,
+    tempMode, setTempMode, history, deleteConversation, renameConversation, togglePin,
   } = useApp()
+  const [search, setSearch] = useState('')
+
+  const visibleConversations = useMemo(() => {
+    const q = search.trim().toLowerCase()
+    const filtered = q
+      ? history.filter(c =>
+          (c.title || '').toLowerCase().includes(q) ||
+          (c.messages || []).some(m => (m.content || '').toLowerCase().includes(q))
+        )
+      : history
+    // Épinglées en premier, en conservant l'ordre de récence à l'intérieur de chaque groupe.
+    return [...filtered].sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0))
+  }, [history, search])
 
   const handleRename = (id, currentTitle) => {
     const next = window.prompt('Nouveau titre de la conversation :', currentTitle || '')
@@ -98,11 +120,27 @@ function SidebarContent() {
         )}
       </div>
 
+      {history.length > 0 && (
+        <div className="px-3 mb-2 relative">
+          <Search size={13} className="absolute left-5 top-1/2 -translate-y-1/2 text-stone-400 pointer-events-none" />
+          <input
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder="Rechercher dans l'historique..."
+            aria-label="Rechercher dans l'historique des conversations"
+            className="input-field w-full pl-7 text-xs py-1.5"
+          />
+        </div>
+      )}
+
       <div className="flex-1 overflow-y-auto px-3 space-y-0.5 pb-2">
         {history.length === 0 && (
           <p className="text-xs text-stone-400 px-1 py-2">Aucune conversation sauvegardée.</p>
         )}
-        {history.map(conv => (
+        {history.length > 0 && visibleConversations.length === 0 && (
+          <p className="text-xs text-stone-400 px-1 py-2">Aucun résultat pour "{search}".</p>
+        )}
+        {visibleConversations.map(conv => (
           <ConversationItem
             key={conv.id}
             conv={conv}
@@ -110,6 +148,7 @@ function SidebarContent() {
             onOpen={() => openConversation(conv.id)}
             onRename={() => handleRename(conv.id, conv.title)}
             onDelete={() => handleDelete(conv.id)}
+            onTogglePin={() => togglePin(conv.id)}
           />
         ))}
       </div>

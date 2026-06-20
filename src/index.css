@@ -335,6 +335,13 @@
 .orb { position: fixed; border-radius: 50%; filter: blur(80px); pointer-events: none; animation: orb-float 12s ease-in-out infinite; }
 .dark .orb { opacity: 0.5; }
 
+@media (prefers-reduced-motion: reduce) {
+  .orb, .animate-pulse, .animate-slide-up, .loading-dot {
+    animation: none !important;
+  }
+  * { transition-duration: 0.01ms !important; }
+}
+
 .syntax-wrapper { border-radius: 0.75rem; overflow: hidden; border: 1px solid #FDE8D0; margin: 0.75em 0; }
 .syntax-header {
   display: flex; align-items: center; justify-content: space-between;
@@ -395,7 +402,13 @@
 .dark .bg-orange-50\/60 { background-color: rgba(249,115,22,0.1); }
 .dark .bg-orange-100,
 .dark .bg-orange-100\/60 { background-color: rgba(249,115,22,0.18); }
+.dark .bg-orange-200 { background-color: rgba(249,115,22,0.3); }
 .dark .bg-orange-200\/30 { background-color: rgba(249,115,22,0.12); }
+
+.dark .border-orange-300 { border-color: rgba(249,115,22,0.45); }
+
+.dark .bg-stone-700 { background-color: #4A4339; }
+.dark .bg-stone-800 { background-color: #57503F; }
 
 .dark .text-orange-300 { color: #FDBA74; }
 .dark .text-orange-400 { color: #FB923C; }

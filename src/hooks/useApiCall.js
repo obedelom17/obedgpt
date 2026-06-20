@@ -39,16 +39,21 @@ export function useStreamingChat() {
   const [loading, setLoading] = useState(false)
   const [error, setError]   = useState(null)
   const lastRef = useRef(null)
+  const controllerRef = useRef(null)
 
   const call = useCallback(async (url, body, onChunk) => {
     setLoading(true)
     setError(null)
     lastRef.current = { url, body, onChunk }
+    const controller = new AbortController()
+    controllerRef.current = controller
+    let full = ''
     try {
       const res = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ...body, stream: true }),
+        signal: controller.signal,
       })
 
       const contentType = res.headers.get('content-type') || ''
@@ -63,7 +68,6 @@ export function useStreamingChat() {
 
       const reader = res.body.getReader()
       const decoder = new TextDecoder()
-      let full = ''
       while (true) {
         const { done, value } = await reader.read()
         if (done) break
@@ -73,14 +77,16 @@ export function useStreamingChat() {
       setLoading(false)
       return { text: full }
     } catch (err) {
-      setError(err.message)
       setLoading(false)
+      if (err.name === 'AbortError') return { text: full, aborted: true }
+      setError(err.message)
       return null
     }
   }, [])
 
+  const abort = useCallback(() => { controllerRef.current?.abort() }, [])
   const retry = useCallback((onChunk) => lastRef.current ? call(lastRef.current.url, lastRef.current.body, onChunk) : null, [call])
   const clearError = useCallback(() => setError(null), [])
 
-  return { loading, error, call, retry, clearError }
+  return { loading, error, call, retry, clearError, abort }
 }

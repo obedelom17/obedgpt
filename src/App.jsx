@@ -34,7 +34,13 @@ export function useApp() {
 }
 
 export default function App() {
-  const [activeMode, setActiveMode] = useState('chat')
+  // Les raccourcis PWA (manifest.json) pointent vers /?mode=vision etc. :
+  // on lit ce paramètre au démarrage pour ouvrir directement le bon mode.
+  const initialMode = (() => {
+    const m = new URLSearchParams(window.location.search).get('mode')
+    return m && MODES[m] ? m : 'chat'
+  })()
+  const [activeMode, setActiveMode] = useState(initialMode)
   const historyManager = useChatHistory()
   // On initialise tout de suite un id pour que la première conversation
   // (avant tout clic sur "Nouveau chat") soit elle aussi sauvegardée.
@@ -72,6 +78,7 @@ export default function App() {
     saveConversation: historyManager.saveConversation,
     deleteConversation: historyManager.deleteConversation,
     renameConversation: historyManager.renameConversation,
+    togglePin: historyManager.togglePin,
     clearHistory: historyManager.clearHistory,
     importHistory: historyManager.importHistory,
   }

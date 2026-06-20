@@ -397,6 +397,16 @@ export async function smartRouteVision(req, res, body) {
     return res.status(503).json({ error: 'GEMINI_API_KEYS manquante.', type: 'NO_GEMINI_KEYS' })
   }
 
+  // Compatible avec l'ancien format (une seule image : imageBase64/mimeType)
+  // et le nouveau format multi-image (un tableau `images`).
+  const images = Array.isArray(body.images) && body.images.length > 0
+    ? body.images
+    : (body.imageBase64 ? [{ base64: body.imageBase64, mimeType: body.mimeType }] : [])
+
+  if (images.length === 0) {
+    return res.status(400).json({ error: 'Aucune image fournie.', type: 'BAD_REQUEST' })
+  }
+
   for (let i = 0; i < GEMINI_KEYS.length; i++) {
     try {
       const genAI = new GoogleGenerativeAI(GEMINI_KEYS[(currentGeminiIndex + i) % GEMINI_KEYS.length])
@@ -407,7 +417,7 @@ export async function smartRouteVision(req, res, body) {
           role: 'user',
           parts: [
             { text: body.prompt || 'Décris cette image en détail.' },
-            { inlineData: { mimeType: body.mimeType || 'image/jpeg', data: body.imageBase64 } }
+            ...images.map(img => ({ inlineData: { mimeType: img.mimeType || 'image/jpeg', data: img.base64 } })),
           ]
         }],
         generationConfig: { maxOutputTokens: MAX_OUTPUT_TOKENS_MEDIA }
@@ -479,15 +489,19 @@ export async function smartRouteCode(req, res, body) {
     ? `Contexte du projet : ${body.context.trim()}\n\n${body.prompt}`
     : body.prompt
 
+  const buildSystemPrompt = () => body.mode === 'explain'
+    ? "Tu es un développeur senior pédagogue. Explique le code fourni de façon claire et structurée : ce qu'il fait globalement, comment il fonctionne étape par étape, et les pièges ou améliorations possibles. Cite les passages pertinents dans des blocs de code."
+    : (body.language
+        ? `Tu es un expert en ${body.language}. Génère du code production-ready avec commentaires.`
+        : 'Tu es un développeur senior. Génère du code production-ready avec commentaires.')
+
   // Try ALL Groq keys
   for (let i = 0; i < GROQ_KEYS.length; i++) {
     try {
       const key = GROQ_KEYS[(currentGroqIndex + i) % GROQ_KEYS.length]
       const groq = new Groq({ apiKey: key })
 
-      const systemPrompt = body.language
-        ? `Tu es un expert en ${body.language}. Génère du code production-ready avec commentaires.`
-        : 'Tu es un développeur senior. Génère du code production-ready avec commentaires.'
+      const systemPrompt = buildSystemPrompt()
 
       const chatCompletion = await groq.chat.completions.create({
         messages: [
@@ -514,9 +528,7 @@ export async function smartRouteCode(req, res, body) {
       const genAI = new GoogleGenerativeAI(GEMINI_KEYS[(currentGeminiIndex + i) % GEMINI_KEYS.length])
       const model = genAI.getGenerativeModel({ model: FALLBACK_MODEL })
 
-      const systemPrompt = body.language
-        ? `Tu es un expert en ${body.language}. Génère du code production-ready avec commentaires.`
-        : 'Tu es un développeur senior. Génère du code production-ready avec commentaires.'
+      const systemPrompt = buildSystemPrompt()
 
       const result = await model.generateContent({
         contents: [{ role: 'user', parts: [{ text: userPrompt }] }],

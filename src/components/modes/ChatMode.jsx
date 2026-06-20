@@ -1,10 +1,11 @@
 import { useState, useRef, useEffect } from 'react'
-import { Send, RotateCcw, User, Zap, FileText, X, Paperclip, Image as ImageIcon, Flame, Mic, RefreshCw } from 'lucide-react'
+import { Send, RotateCcw, User, Zap, FileText, X, Paperclip, Image as ImageIcon, Flame, Mic, RefreshCw, Square, Pencil, Check, Download, Printer } from 'lucide-react'
 import { LoadingDots, MarkdownRenderer, ErrorBanner } from '../ui'
 import { useStreamingChat } from '../../hooks/useApiCall'
 import { useApp } from '../../App'
 
-const SYSTEM_PROMPT = "Tu es ObedGPT, un assistant IA intelligent créé par Obed Elom AGBEBAVI. Si on te demande qui t'a créé/développé, réponds que c'est Obed Elom AGBEBAVI. Réponds dans la langue de l'utilisateur. Utilise LaTeX pour les maths : $...$ inline, $$...$$ pour les blocs."
+const BASE_SYSTEM_PROMPT = "Tu es ObedGPT, un assistant IA intelligent créé par Obed Elom AGBEBAVI. Si on te demande qui t'a créé/développé, réponds que c'est Obed Elom AGBEBAVI. Réponds dans la langue de l'utilisateur. Utilise LaTeX pour les maths : $...$ inline, $$...$$ pour les blocs."
+const PERSONA_KEY = 'obedgpt-persona'
 
 // On n'envoie jamais TOUT l'historique au modèle : au-delà d'un certain
 // nombre de messages, le coût en tokens d'un seul tour de chat exploserait
@@ -14,14 +15,16 @@ const SYSTEM_PROMPT = "Tu es ObedGPT, un assistant IA intelligent créé par Obe
 const MAX_CONTEXT_MESSAGES = 16
 
 const ALLOWED_DOCS = [
-  // Documents
   'application/pdf', 'text/plain', 'text/csv', 'application/json',
   'application/msword',
   'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-  // Images
   'image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/bmp', 'image/tiff', 'image/svg+xml'
 ]
 const MAX_DOC_SIZE = 10 * 1024 * 1024
+
+function escapeHtml(str) {
+  return str.replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]))
+}
 
 export default function ChatMode() {
   const { activeChatId, tempMode, saveConversation, history } = useApp()
@@ -29,10 +32,16 @@ export default function ChatMode() {
 
   const [messages, setMessages]     = useState(() => savedConv?.messages || [])
   const [input, setInput]           = useState('')
-  const [systemPrompt] = useState(SYSTEM_PROMPT)
+  const [systemPrompt] = useState(() => {
+    const persona = localStorage.getItem(PERSONA_KEY)
+    return persona ? `${BASE_SYSTEM_PROMPT}\n\nInstructions supplémentaires de l'utilisateur : ${persona}` : BASE_SYSTEM_PROMPT
+  })
   const [attachedFiles, setAttachedFiles] = useState([])
+  const [fileError, setFileError] = useState(null)
   const [listening, setListening] = useState(false)
-  const { loading, error, call, retry, clearError } = useStreamingChat()
+  const [editingIndex, setEditingIndex] = useState(null)
+  const [editValue, setEditValue] = useState('')
+  const { loading, error, call, retry, clearError, abort } = useStreamingChat()
   const bottomRef  = useRef(null)
   const fileInputRef = useRef(null)
   const recognitionRef = useRef(null)
@@ -56,25 +65,35 @@ export default function ChatMode() {
 
   const isImage = (type) => type.startsWith('image/')
 
+  const validateFiles = (files) => {
+    const valid = []
+    let firstError = null
+    for (const f of files) {
+      if (!ALLOWED_DOCS.includes(f.type)) { firstError = firstError || `Type non supporté : ${f.name || f.type}`; continue }
+      if (f.size > MAX_DOC_SIZE) { firstError = firstError || `Fichier trop volumineux : ${f.name} (max 10MB)`; continue }
+      valid.push(f)
+    }
+    setFileError(firstError)
+    return valid
+  }
+
   const handleFileSelect = (e) => {
-    const files = Array.from(e.target.files)
-    const valid = files.filter(f => {
-      if (!ALLOWED_DOCS.includes(f.type)) {
-        alert(`Type non supporté: ${f.name}`)
-        return false
-      }
-      if (f.size > MAX_DOC_SIZE) {
-        alert(`Fichier trop volumineux: ${f.name}. Max 10MB.`)
-        return false
-      }
-      return true
-    })
+    const valid = validateFiles(Array.from(e.target.files))
     setAttachedFiles(prev => [...prev, ...valid])
   }
 
-  const removeFile = (index) => {
-    setAttachedFiles(prev => prev.filter((_, i) => i !== index))
+  // Coller une image directement (Ctrl+V) dans le champ de message.
+  const handlePaste = (e) => {
+    const items = e.clipboardData?.items
+    if (!items) return
+    const imageFiles = Array.from(items).filter(it => it.type?.startsWith('image/')).map(it => it.getAsFile()).filter(Boolean)
+    if (imageFiles.length === 0) return
+    e.preventDefault()
+    const valid = validateFiles(imageFiles)
+    setAttachedFiles(prev => [...prev, ...valid])
   }
+
+  const removeFile = (index) => setAttachedFiles(prev => prev.filter((_, i) => i !== index))
 
   const readFileAsBase64 = (file) => new Promise((resolve) => {
     const reader = new FileReader()
@@ -86,8 +105,7 @@ export default function ChatMode() {
   // navigateur, ici dans l'autre sens (micro -> texte).
   const toggleDictation = () => {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition
-    if (!SpeechRecognition) { alert('La dictée vocale n\'est pas supportée par ce navigateur.'); return }
-
+    if (!SpeechRecognition) { setFileError("La dictée vocale n'est pas supportée par ce navigateur."); return }
     if (listening) { recognitionRef.current?.stop(); return }
 
     const recognition = new SpeechRecognition()
@@ -106,8 +124,8 @@ export default function ChatMode() {
   }
 
   // Ajoute un message assistant vide puis le remplit morceau par morceau au
-  // fil du streaming. En cas d'échec, on retire ce message vide (l'erreur
-  // s'affiche déjà via le bandeau ErrorBanner).
+  // fil du streaming. En cas d'échec (hors arrêt volontaire), on retire ce
+  // message vide ; l'erreur s'affiche via le bandeau ErrorBanner.
   const appendAssistantStreamed = async (apiCallFn) => {
     setMessages(prev => [...prev, { role: 'assistant', content: '' }])
     const onChunk = (delta) => {
@@ -123,28 +141,29 @@ export default function ChatMode() {
     return data
   }
 
+  const sendFromMessages = async (newMessages, fileData = []) => {
+    const contextWindow = newMessages.slice(-MAX_CONTEXT_MESSAGES)
+    await appendAssistantStreamed(onChunk => call('/api/chat', { messages: contextWindow, systemPrompt, files: fileData }, onChunk))
+  }
+
   const send = async () => {
     const text = input.trim()
     if ((!text && attachedFiles.length === 0) || loading) return
 
     let fileData = []
-    if (attachedFiles.length > 0) {
-      fileData = await Promise.all(attachedFiles.map(readFileAsBase64))
-    }
+    if (attachedFiles.length > 0) fileData = await Promise.all(attachedFiles.map(readFileAsBase64))
 
     const userContent = text + (fileData.length > 0 ? `\n\n[Fichiers joints: ${fileData.map(f => f.name).join(', ')}]` : '')
     const newMessages = [...messages, { role: 'user', content: userContent }]
     setMessages(newMessages)
     setInput('')
     setAttachedFiles([])
+    setFileError(null)
 
-    const contextWindow = newMessages.slice(-MAX_CONTEXT_MESSAGES)
-    await appendAssistantStreamed(onChunk => call('/api/chat', { messages: contextWindow, systemPrompt, files: fileData }, onChunk))
+    await sendFromMessages(newMessages, fileData)
   }
 
-  const handleRetry = async () => {
-    await appendAssistantStreamed(onChunk => retry(onChunk))
-  }
+  const handleRetry = async () => { await appendAssistantStreamed(onChunk => retry(onChunk)) }
 
   // Régénère la dernière réponse de l'assistant : on retire les messages
   // assistant en fin de conversation puis on renvoie le même contexte.
@@ -155,12 +174,59 @@ export default function ChatMode() {
     const trimmed = messages.slice(0, end)
     if (trimmed.length === 0) return
     setMessages(trimmed)
-    const contextWindow = trimmed.slice(-MAX_CONTEXT_MESSAGES)
-    await appendAssistantStreamed(onChunk => call('/api/chat', { messages: contextWindow, systemPrompt, files: [] }, onChunk))
+    await sendFromMessages(trimmed)
+  }
+
+  // Édition d'un message déjà envoyé : on retire ce message et tout ce qui
+  // suit, on renvoie la version corrigée, puis on régénère la réponse.
+  const startEdit = (i) => {
+    if (loading) return
+    setEditingIndex(i)
+    setEditValue(messages[i].content)
+  }
+  const cancelEdit = () => { setEditingIndex(null); setEditValue('') }
+  const saveEdit = async () => {
+    const text = editValue.trim()
+    if (!text) return
+    const i = editingIndex
+    const trimmed = [...messages.slice(0, i), { role: 'user', content: text }]
+    setMessages(trimmed)
+    setEditingIndex(null)
+    setEditValue('')
+    await sendFromMessages(trimmed)
+  }
+
+  const exportMarkdown = () => {
+    const md = messages.map(m => `**${m.role === 'user' ? 'Vous' : 'ObedGPT'}** :\n\n${m.content}\n`).join('\n---\n\n')
+    const blob = new Blob([md], { type: 'text/markdown' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `obedgpt-conversation-${new Date().toISOString().slice(0, 10)}.md`
+    document.body.appendChild(a); a.click(); a.remove()
+    URL.revokeObjectURL(url)
+  }
+
+  const exportPrintable = () => {
+    const win = window.open('', '_blank')
+    if (!win) { setFileError('Le navigateur a bloqué la fenêtre d\'impression (pop-up).'); return }
+    const body = messages.map(m =>
+      `<div class="msg ${m.role}"><strong>${m.role === 'user' ? 'Vous' : 'ObedGPT'}</strong><div>${escapeHtml(m.content).replace(/\n/g, '<br/>')}</div></div>`
+    ).join('')
+    win.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>ObedGPT — Conversation</title><style>
+      body{font-family:Arial,Helvetica,sans-serif;max-width:720px;margin:2rem auto;color:#1c1917;line-height:1.6;padding:0 1rem}
+      h2{font-family:Georgia,serif}
+      .msg{margin-bottom:1.25rem;padding-bottom:1rem;border-bottom:1px solid #eee}
+      .msg.user strong{color:#ea580c} .msg.assistant strong{color:#1c1917}
+      strong{display:block;margin-bottom:.25rem;font-size:.8rem;text-transform:uppercase;letter-spacing:.03em}
+    </style></head><body><h2>Conversation ObedGPT</h2>${body}</body></html>`)
+    win.document.close()
+    win.focus()
+    setTimeout(() => win.print(), 250)
   }
 
   const onKeyDown = e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send() } }
-  const reset = () => { setMessages([]); clearError(); setAttachedFiles([]) }
+  const reset = () => { setMessages([]); clearError(); setAttachedFiles([]); setFileError(null); cancelEdit() }
 
   const lastIsAssistant = messages.length > 0 && messages[messages.length - 1].role === 'assistant' && !loading
 
@@ -189,22 +255,42 @@ export default function ChatMode() {
 
         {messages.map((msg, i) => {
           const isLast = i === messages.length - 1
+          const isEditing = editingIndex === i
           return (
-            <div key={i} className={`flex gap-2 md:gap-3 animate-slide-up ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+            <div key={i} className={`flex gap-2 md:gap-3 animate-slide-up group ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
               {msg.role === 'assistant' && (
                 <div className="w-6 h-6 md:w-7 md:h-7 rounded-lg amber-gradient flex items-center justify-center flex-shrink-0 mt-0.5">
                   <Zap size={10} className="text-white" /></div>
               )}
               <div className="max-w-[85%] sm:max-w-[75%]">
-                <div className={msg.role === 'user' ? 'message-user' : 'message-ai'}>
-                  {msg.role === 'user'
-                    ? <p className="text-xs md:text-sm text-stone-800 break-words">{msg.content}</p>
-                    : (msg.content
-                        ? <MarkdownRenderer content={msg.content} />
-                        : <LoadingDots />)
-                  }
-                </div>
-                {msg.role === 'assistant' && isLast && lastIsAssistant && msg.content && (
+                {isEditing ? (
+                  <div className="message-user">
+                    <textarea value={editValue} onChange={e => setEditValue(e.target.value)} rows={3} autoFocus
+                      aria-label="Modifier le message"
+                      className="w-full bg-transparent text-xs md:text-sm text-stone-800 outline-none resize-none" />
+                    <div className="flex gap-2 justify-end mt-2">
+                      <button onClick={cancelEdit} className="text-[11px] text-stone-400 hover:text-stone-600 px-2 py-1">Annuler</button>
+                      <button onClick={saveEdit} className="flex items-center gap-1 text-[11px] bg-orange-500 text-white px-2.5 py-1 rounded-lg hover:bg-orange-600">
+                        <Check size={11} /> Renvoyer
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className={msg.role === 'user' ? 'message-user' : 'message-ai'}>
+                    {msg.role === 'user'
+                      ? <p className="text-xs md:text-sm text-stone-800 break-words whitespace-pre-wrap">{msg.content}</p>
+                      : (msg.content ? <MarkdownRenderer content={msg.content} /> : <LoadingDots />)
+                    }
+                  </div>
+                )}
+
+                {!isEditing && msg.role === 'user' && (
+                  <button onClick={() => startEdit(i)} aria-label="Modifier ce message"
+                    className="flex items-center gap-1 text-[10px] text-stone-400 hover:text-orange-500 mt-1 ml-auto opacity-0 group-hover:opacity-100 transition-opacity float-right">
+                    <Pencil size={10} /> Modifier
+                  </button>
+                )}
+                {!isEditing && msg.role === 'assistant' && isLast && lastIsAssistant && msg.content && (
                   <button onClick={regenerate} aria-label="Régénérer cette réponse"
                     className="flex items-center gap-1 text-[10px] text-stone-400 hover:text-orange-500 mt-1 transition-colors">
                     <RefreshCw size={11} /> Régénérer
@@ -240,13 +326,24 @@ export default function ChatMode() {
           ))}
         </div>
       )}
+      {fileError && (
+        <div className="px-3 md:px-4 pt-2">
+          <p className="text-xs text-red-500 flex items-center justify-between">
+            {fileError}
+            <button onClick={() => setFileError(null)} aria-label="Fermer ce message" className="text-stone-400 hover:text-stone-600 ml-2"><X size={12} /></button>
+          </p>
+        </div>
+      )}
 
       {/* Input */}
       <div className="px-3 md:px-4 pb-3 md:pb-4 pt-2 border-t border-orange-100 bg-white/60 safe-bottom">
         <div className="flex gap-2 items-end">
           {messages.length > 0 && (
-            <button onClick={reset} aria-label="Nouvelle conversation" title="Nouvelle conversation"
-              className="btn-ghost p-2 md:p-2.5 flex-shrink-0 hidden sm:flex"><RotateCcw size={15} /></button>
+            <div className="hidden sm:flex gap-1 flex-shrink-0">
+              <button onClick={reset} aria-label="Nouvelle conversation" title="Nouvelle conversation" className="btn-ghost p-2 md:p-2.5"><RotateCcw size={15} /></button>
+              <button onClick={exportMarkdown} aria-label="Exporter en Markdown" title="Exporter en Markdown" className="btn-ghost p-2 md:p-2.5"><Download size={15} /></button>
+              <button onClick={exportPrintable} aria-label="Imprimer / Exporter en PDF" title="Imprimer / Exporter en PDF" className="btn-ghost p-2 md:p-2.5"><Printer size={15} /></button>
+            </div>
           )}
           <input type="file" ref={fileInputRef} onChange={handleFileSelect} multiple
             accept="image/*,.pdf,.txt,.csv,.json,.doc,.docx"
@@ -260,17 +357,25 @@ export default function ChatMode() {
             className={`p-2 md:p-2.5 flex-shrink-0 rounded-xl transition-all ${listening ? 'bg-red-50 text-red-500 border border-red-200 animate-pulse' : 'btn-ghost'}`}>
             <Mic size={15} />
           </button>
-          <textarea value={input} onChange={e => setInput(e.target.value)} onKeyDown={onKeyDown}
+          <textarea value={input} onChange={e => setInput(e.target.value)} onKeyDown={onKeyDown} onPaste={handlePaste}
             rows={1} disabled={loading}
-            placeholder="Message..."
+            placeholder="Message... (colle une image avec Ctrl+V)"
             aria-label="Message à envoyer"
             className="input-field resize-none flex-1 text-sm"
             style={{ minHeight: '40px', maxHeight: '120px' }}
             onInput={e => { e.target.style.height = 'auto'; e.target.style.height = Math.min(e.target.scrollHeight, 120) + 'px' }}
           />
-          <button onClick={send} disabled={(!input.trim() && attachedFiles.length === 0) || loading} aria-label="Envoyer le message"
-            className="btn-primary p-2.5 md:p-3 flex-shrink-0">
-            <Send size={15} /></button>
+          {loading ? (
+            <button onClick={abort} aria-label="Arrêter la génération" title="Arrêter"
+              className="flex items-center justify-center p-2.5 md:p-3 flex-shrink-0 rounded-xl bg-stone-700 text-white hover:bg-stone-800 transition-colors">
+              <Square size={14} fill="currentColor" />
+            </button>
+          ) : (
+            <button onClick={send} disabled={!input.trim() && attachedFiles.length === 0} aria-label="Envoyer le message"
+              className="btn-primary p-2.5 md:p-3 flex-shrink-0">
+              <Send size={15} />
+            </button>
+          )}
         </div>
       </div>
     </div>

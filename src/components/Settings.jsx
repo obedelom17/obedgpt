@@ -1,6 +1,13 @@
 import { useState, useRef } from 'react'
-import { Zap, Trash2, User, Download, Upload } from 'lucide-react'
+import { Zap, Trash2, User, Download, Upload, Sun, Moon, Monitor, Type, Sparkles, Info, Mail, Github } from 'lucide-react'
 import { useApp } from '../App'
+import { useTheme } from '../hooks/useTheme.jsx'
+
+const PERSONA_KEY = 'obedgpt-persona'
+const CHANGELOG = [
+  { date: 'Juin 2026', items: ['Mode sombre automatique', 'Application installable (PWA)', 'Réponses en streaming', 'Dictée vocale & micro live'] },
+  { date: 'Mai 2026',  items: ['Refonte navigation & économie de tokens', 'Export/Import de l\'historique'] },
+]
 
 // Redimensionne l'image côté navigateur avant de la stocker : une photo de
 // 2MB devient quelques dizaines de Ko, ce qui évite de dépasser le quota du
@@ -31,10 +38,20 @@ function resizeImage(file, maxSize = 256) {
 
 export default function Settings() {
   const { history, clearHistory, importHistory } = useApp()
+  const { themePref, setThemePref, fontSize, setFontSize } = useTheme()
   const [avatar, setAvatar] = useState(() => localStorage.getItem('obedgpt-avatar') || '')
   const [avatarError, setAvatarError] = useState(null)
   const [importMessage, setImportMessage] = useState(null)
+  const [persona, setPersona] = useState(() => localStorage.getItem(PERSONA_KEY) || '')
+  const [personaSaved, setPersonaSaved] = useState(false)
   const importInputRef = useRef(null)
+
+  const savePersona = () => {
+    if (persona.trim()) localStorage.setItem(PERSONA_KEY, persona.trim())
+    else localStorage.removeItem(PERSONA_KEY)
+    setPersonaSaved(true)
+    setTimeout(() => setPersonaSaved(false), 1500)
+  }
 
   const exportHistory = () => {
     const blob = new Blob([JSON.stringify(history, null, 2)], { type: 'application/json' })
@@ -137,6 +154,56 @@ export default function Settings() {
           {avatarError && <p className="text-xs text-red-500 mt-1">{avatarError}</p>}
         </div>
 
+        {/* Apparence */}
+        <div className="card p-4 md:p-6">
+          <h3 className="font-display font-semibold text-stone-800 mb-3 md:mb-4 flex items-center gap-2 text-sm md:text-base">
+            <Sun size={16} /> Apparence
+          </h3>
+          <div className="space-y-4">
+            <div>
+              <div className="text-sm font-medium text-stone-700 mb-2">Thème</div>
+              <div className="flex gap-2">
+                {[
+                  { id: 'auto',  label: 'Auto',   Icon: Monitor },
+                  { id: 'light', label: 'Clair',  Icon: Sun },
+                  { id: 'dark',  label: 'Sombre', Icon: Moon },
+                ].map(({ id, label, Icon }) => (
+                  <button key={id} onClick={() => setThemePref(id)} aria-pressed={themePref === id}
+                    className={`flex-1 flex flex-col items-center gap-1 py-2.5 rounded-xl border text-xs transition-colors ${themePref === id ? 'bg-orange-50 border-orange-300 text-orange-600 font-medium' : 'border-orange-100 text-stone-500 hover:bg-orange-50/60'}`}>
+                    <Icon size={16} />{label}
+                  </button>
+                ))}
+              </div>
+              <p className="text-xs text-stone-400 mt-1.5">"Auto" suit le thème de ton système.</p>
+            </div>
+            <div>
+              <div className="text-sm font-medium text-stone-700 mb-2 flex items-center gap-1.5"><Type size={14} /> Taille du texte</div>
+              <div className="flex gap-2">
+                {[{ id: 'sm', label: 'Petit' }, { id: 'md', label: 'Normal' }, { id: 'lg', label: 'Grand' }].map(({ id, label }) => (
+                  <button key={id} onClick={() => setFontSize(id)} aria-pressed={fontSize === id}
+                    className={`flex-1 py-2 rounded-xl border text-xs transition-colors ${fontSize === id ? 'bg-orange-50 border-orange-300 text-orange-600 font-medium' : 'border-orange-100 text-stone-500 hover:bg-orange-50/60'}`}>
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Personnalité du Chat */}
+        <div className="card p-4 md:p-6">
+          <h3 className="font-display font-semibold text-stone-800 mb-3 md:mb-4 flex items-center gap-2 text-sm md:text-base">
+            <Sparkles size={16} /> Personnalité du Chat
+          </h3>
+          <textarea value={persona} onChange={e => setPersona(e.target.value)} onBlur={savePersona} rows={3} maxLength={300}
+            placeholder="Ex : Réponds toujours de façon concise. Tutoie-moi. Explique comme à un débutant en programmation."
+            aria-label="Instructions de personnalité pour le Chat" className="input-field w-full resize-none text-sm" />
+          <div className="flex items-center justify-between mt-2">
+            <p className="text-xs text-stone-400">Ajouté à chaque conversation du mode Chat.</p>
+            {personaSaved && <span className="text-xs text-orange-500">Enregistré ✓</span>}
+          </div>
+        </div>
+
         {/* History Management */}
         <div className="card p-4 md:p-6">
           <h3 className="font-display font-semibold text-stone-800 mb-3 md:mb-4 flex items-center gap-2 text-sm md:text-base">
@@ -166,6 +233,36 @@ export default function Settings() {
             <p className={`text-xs mt-2 ${importMessage.type === 'ok' ? 'text-orange-600' : 'text-red-500'}`}>{importMessage.text}</p>
           )}
           <p className="text-xs text-stone-400 mt-2">L'export te permet de garder une copie de tes conversations (elles ne vivent que dans ce navigateur) et de les retrouver sur un autre appareil via "Importer".</p>
+        </div>
+
+        {/* À propos */}
+        <div className="card p-4 md:p-6">
+          <h3 className="font-display font-semibold text-stone-800 mb-3 md:mb-4 flex items-center gap-2 text-sm md:text-base">
+            <Info size={16} /> À propos
+          </h3>
+          <p className="text-sm text-stone-600 mb-4">
+            ObedGPT est développé par <span className="font-medium text-stone-800">Obed Elom AGBEBAVI</span> — React, Vite, Tailwind, Vercel.
+          </p>
+          <div className="space-y-3 mb-4">
+            {CHANGELOG.map(entry => (
+              <div key={entry.date}>
+                <div className="text-xs font-mono font-medium text-orange-500 mb-1">{entry.date}</div>
+                <ul className="text-xs text-stone-500 space-y-0.5 pl-4 list-disc">
+                  {entry.items.map(item => <li key={item}>{item}</li>)}
+                </ul>
+              </div>
+            ))}
+          </div>
+          <div className="flex gap-2 flex-wrap pt-3 border-t border-orange-100">
+            <a href="mailto:agbebaviobedelom@gmail.com?subject=Feedback%20ObedGPT" aria-label="Envoyer un feedback par e-mail"
+              className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-orange-50 border border-orange-200 text-orange-600 text-sm hover:bg-orange-100 transition-colors">
+              <Mail size={14} /> Feedback
+            </a>
+            <a href="https://github.com/obedelom17/obedgpt" target="_blank" rel="noopener noreferrer" aria-label="Voir le code source sur GitHub"
+              className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-stone-50 border border-orange-100 text-stone-600 text-sm hover:bg-orange-50 transition-colors">
+              <Github size={14} /> Code source
+            </a>
+          </div>
         </div>
 
       </div>

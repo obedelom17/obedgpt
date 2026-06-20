@@ -1,40 +1,57 @@
-import { createContext, useContext, useEffect, useState } from 'react'
+import { createContext, useContext, useEffect, useState, useCallback } from 'react'
 
 const ThemeContext = createContext(null)
+const THEME_KEY = 'obedgpt-theme-pref'   // 'auto' | 'light' | 'dark'
+const FONT_KEY  = 'obedgpt-font-size'    // 'sm' | 'md' | 'lg'
 
-// Détecte le thème du système (clair/sombre) et le garde synchronisé en
-// direct : si l'utilisateur change le thème de son OS/navigateur pendant
-// qu'ObedGPT est ouvert, l'app bascule automatiquement, sans rechargement
-// et sans réglage manuel à gérer.
+const FONT_SIZES = { sm: '15px', md: '16px', lg: '18px' }
+
 function getSystemTheme() {
   if (typeof window === 'undefined' || !window.matchMedia) return 'light'
   return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
 }
 
+// Détecte le thème du système (clair/sombre) ET garde la possibilité pour
+// l'utilisateur de forcer un thème dans Paramètres ('auto' suit l'OS comme
+// avant, 'light'/'dark' l'imposent quel que soit le thème du système).
 export function ThemeProvider({ children }) {
+  const [themePref, setThemePrefState] = useState(() => localStorage.getItem(THEME_KEY) || 'auto')
   const [theme, setTheme] = useState(getSystemTheme)
+  const [fontSize, setFontSizeState] = useState(() => localStorage.getItem(FONT_KEY) || 'md')
 
   useEffect(() => {
     const mql = window.matchMedia('(prefers-color-scheme: dark)')
-    const apply = (isDark) => {
+    const apply = () => {
+      const pref = localStorage.getItem(THEME_KEY) || 'auto'
+      const isDark = pref === 'auto' ? mql.matches : pref === 'dark'
       setTheme(isDark ? 'dark' : 'light')
       document.documentElement.classList.toggle('dark', isDark)
     }
-    apply(mql.matches)
-
-    // addEventListener('change', ...) est la bonne API moderne ; on garde
-    // un repli sur l'ancienne addListener pour Safari/WebKit plus anciens.
-    if (mql.addEventListener) mql.addEventListener('change', e => apply(e.matches))
-    else mql.addListener(e => apply(e.matches))
-
+    apply()
+    if (mql.addEventListener) mql.addEventListener('change', apply)
+    else mql.addListener(apply)
     return () => {
-      if (mql.removeEventListener) mql.removeEventListener('change', e => apply(e.matches))
-      else mql.removeListener(e => apply(e.matches))
+      if (mql.removeEventListener) mql.removeEventListener('change', apply)
+      else mql.removeListener(apply)
     }
+  }, [themePref])
+
+  useEffect(() => {
+    document.documentElement.style.fontSize = FONT_SIZES[fontSize] || FONT_SIZES.md
+  }, [fontSize])
+
+  const setThemePref = useCallback((pref) => {
+    localStorage.setItem(THEME_KEY, pref)
+    setThemePrefState(pref)
+  }, [])
+
+  const setFontSize = useCallback((size) => {
+    localStorage.setItem(FONT_KEY, size)
+    setFontSizeState(size)
   }, [])
 
   return (
-    <ThemeContext.Provider value={{ theme }}>
+    <ThemeContext.Provider value={{ theme, themePref, setThemePref, fontSize, setFontSize }}>
       {children}
     </ThemeContext.Provider>
   )

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { Volume2, Play, Pause, Square, Wand2, AlertTriangle } from 'lucide-react'
 import { LoadingDots, ErrorBanner } from '../ui'
 import { useApiCall } from '../../hooks/useApiCall'
@@ -18,7 +18,26 @@ export default function TTSMode() {
   const [playing, setPlaying]   = useState(false)
   const [paused, setPaused]     = useState(false)
   const [ttsSupported, setTtsSupported] = useState(true)
+  const [boundaryIndex, setBoundaryIndex] = useState(null) // position du mot en cours (karaoké)
   const { loading, error, call, clearError } = useApiCall()
+
+  // Découpe le texte en segments mot/espace avec leur position, pour
+  // pouvoir surligner précisément le mot prononcé via l'évènement
+  // `onboundary` de la synthèse vocale (effet "karaoké").
+  const tokens = useMemo(() => {
+    const list = []
+    const re = /(\s+)|(\S+)/g
+    let m
+    while ((m = re.exec(text))) list.push({ text: m[0], start: m.index, isWord: !!m[2] })
+    return list
+  }, [text])
+
+  const currentTokenIdx = useMemo(() => {
+    if (boundaryIndex == null) return -1
+    let idx = -1
+    for (let i = 0; i < tokens.length; i++) if (tokens[i].isWord && tokens[i].start <= boundaryIndex) idx = i
+    return idx
+  }, [boundaryIndex, tokens])
 
   useEffect(() => {
     if (!window.speechSynthesis) { setTtsSupported(false); return }
@@ -44,14 +63,19 @@ export default function TTSMode() {
   const speak = () => {
     if (!text.trim() || !ttsSupported) return
     window.speechSynthesis.cancel()
+    setBoundaryIndex(null)
     const utt = new SpeechSynthesisUtterance(text)
     if (voice) utt.voice = voice
     utt.rate    = settings.rate
     utt.pitch   = settings.pitch
     utt.volume  = settings.volume
     utt.onstart = () => { setPlaying(true); setPaused(false) }
-    utt.onend   = () => { setPlaying(false); setPaused(false) }
-    utt.onerror = () => { setPlaying(false); setPaused(false) }
+    utt.onend   = () => { setPlaying(false); setPaused(false); setBoundaryIndex(null) }
+    utt.onerror = () => { setPlaying(false); setPaused(false); setBoundaryIndex(null) }
+    // Le support du karaoké mot-par-mot dépend du navigateur (solide sur
+    // Chrome/Edge, plus limité sur Firefox/Safari) : sans risque, on
+    // l'affiche seulement quand l'évènement est effectivement déclenché.
+    utt.onboundary = (e) => { if (e.name === 'word' || e.name === undefined) setBoundaryIndex(e.charIndex) }
     window.speechSynthesis.speak(utt)
   }
 
@@ -60,7 +84,7 @@ export default function TTSMode() {
     else        { window.speechSynthesis.pause();  setPaused(true)  }
   }
 
-  const stop = () => { window.speechSynthesis.cancel(); setPlaying(false); setPaused(false) }
+  const stop = () => { window.speechSynthesis.cancel(); setPlaying(false); setPaused(false); setBoundaryIndex(null) }
 
   if (!ttsSupported) {
     return (
@@ -95,9 +119,19 @@ export default function TTSMode() {
         {/* Text area */}
         <div className="card p-4 space-y-3">
           <p className="text-xs font-display font-semibold text-stone-500 uppercase tracking-wider">Texte à lire</p>
-          <textarea value={text} onChange={e => setText(e.target.value)} rows={6}
-            placeholder="Écris ou génère un texte à lire à voix haute..."
-            className="input-field w-full resize-none" />
+          {playing ? (
+            <div className="input-field w-full min-h-[140px] whitespace-pre-wrap text-sm leading-relaxed" aria-live="off">
+              {tokens.map((t, i) => t.isWord
+                ? <span key={i} className={i === currentTokenIdx ? 'bg-orange-200 text-orange-900 rounded px-0.5 transition-colors' : ''}>{t.text}</span>
+                : <span key={i}>{t.text}</span>
+              )}
+            </div>
+          ) : (
+            <textarea value={text} onChange={e => setText(e.target.value)} rows={6}
+              placeholder="Écris ou génère un texte à lire à voix haute..."
+              aria-label="Texte à lire à voix haute"
+              className="input-field w-full resize-none" />
+          )}
           <p className="text-xs text-stone-400">{text.split(' ').filter(Boolean).length} mots · {Math.ceil(text.split(' ').filter(Boolean).length / 150)} min</p>
         </div>
 
