@@ -2,7 +2,7 @@
 
 Interface IA multi-modale propulsée par SmartRouter (Groq + Gemini).
 
-## ✨ Fonctionnalités
+##  Fonctionnalités
 
 - **Chat** avec historique, documents (PDF, TXT, CSV, JSON, DOC, DOCX), mode temporaire
 - **Vision** — analyse d'images
@@ -12,13 +12,13 @@ Interface IA multi-modale propulsée par SmartRouter (Groq + Gemini).
 - **Thème clair/sombre**
 - **SmartRouter** — rotation Groq + fallback Gemini automatique
 
-## 🚀 Installation
+##  Installation
 
 ```bash
 npm install
 ```
 
-## 🔑 Configuration
+##  Configuration
 
 Copie `.env.example` en `.env.local` et remplis tes clés :
 
@@ -27,19 +27,19 @@ GROQ_API_KEYS=gsk_xxx,gsk_yyy    # 2-3 clés séparées par virgule
 GEMINI_API_KEY=AIza...            # Clé fallback
 ```
 
-## 🖥️ Développement
+##  Développement
 
 ```bash
 npm run dev
 ```
 
-## 🌐 Déploiement
+##  Déploiement
 
 ```bash
 vercel --prod
 ```
 
-## 📁 Variables Vercel
+##  Variables Vercel
 
 Dans Vercel Dashboard → Settings → Environment Variables :
 
@@ -48,7 +48,7 @@ Dans Vercel Dashboard → Settings → Environment Variables :
 | `GROQ_API_KEYS` | 2-3 clés Groq séparées par des virgules |
 | `GEMINI_API_KEY` | Clé Google AI Studio (fallback) |
 
-## 🧠 SmartRouter
+##  SmartRouter
 
 Le backend utilise un router intelligent :
 1. **Rate limit** — 5 req/min par IP
@@ -58,4 +58,3 @@ Le backend utilise un router intelligent :
 
 ---
 
-Made with ❤️ by Obed
