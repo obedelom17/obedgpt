@@ -235,19 +235,15 @@ export default function ChatMode() {
       {/* Messages */}
       <div className="flex-1 overflow-y-auto px-3 md:px-4 py-3 md:py-4 space-y-3 md:space-y-4">
         {messages.length === 0 && !loading && (
-          <div className="flex flex-col items-center justify-center h-full gap-3 md:gap-4 text-center px-2">
-            <div className="w-14 h-14 md:w-16 md:h-16 rounded-2xl amber-gradient flex items-center justify-center shadow-glow-amber">
-              <Zap size={22} className="text-white" />
-            </div>
-            <div>
-              <h2 className="font-display font-bold text-lg md:text-xl text-gradient">ObedGPT</h2>
-              <p className="text-stone-400 text-xs md:text-sm mt-1">Pose une question à ObedGPT, démarre une conversation</p>
-              {tempMode && <p className="text-orange-500 text-xs mt-1 flex items-center gap-1 justify-center"><Flame size={12} /> Mode temporaire</p>}
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-w-md w-full mt-2">
+          <div className="flex flex-col justify-end h-full pb-6 px-2">
+            <p className="text-stone-400 text-xs mb-3">
+              {tempMode && <span className="text-orange-500 mr-2">Mode temporaire</span>}
+              Suggestions
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 max-w-lg">
               {['Devine les questions du prof', 'Fais mon exercice de maison', 'Developpe moi une application', 'Traite moi ça'].map(s => (
                 <button key={s} onClick={() => setInput(s)}
-                  className="text-xs text-left p-2.5 md:p-3 card rounded-xl text-stone-500 hover:text-orange-600 hover:border-orange-200 transition-all">{s}</button>
+                  className="text-xs text-left px-3 py-2 rounded-lg border border-orange-100/60 text-stone-500 hover:text-orange-600 hover:border-orange-200 bg-transparent transition-all">{s}</button>
               ))}
             </div>
           </div>
@@ -259,8 +255,8 @@ export default function ChatMode() {
           return (
             <div key={i} className={`flex gap-2 md:gap-3 animate-slide-up group ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
               {msg.role === 'assistant' && (
-                <div className="w-6 h-6 md:w-7 md:h-7 rounded-lg amber-gradient flex items-center justify-center flex-shrink-0 mt-0.5">
-                  <Zap size={10} className="text-white" /></div>
+                <div className="w-6 h-6 flex items-center justify-center flex-shrink-0 mt-0.5 text-orange-400">
+                  <Zap size={14} /></div>
               )}
               <div className="max-w-[85%] sm:max-w-[75%]">
                 {isEditing ? (
