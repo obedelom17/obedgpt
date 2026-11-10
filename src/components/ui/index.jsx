@@ -8,6 +8,7 @@ import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
 import { oneLight, oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism'
 import { Copy, Check, Upload, X, File, AlertTriangle, Clock, WifiOff, KeyRound, FileX, Cpu } from 'lucide-react'
 import { useTheme } from '../../hooks/useTheme.jsx'
+import { useToast } from '../fx/Toast'
 
 export function classifyError(input) {
   if (!input) return null
@@ -59,11 +60,21 @@ const COLOR_CLASSES = {
   red:    { wrap: 'bg-red-50 border-red-200',       bar: 'bg-red-400',    text: 'text-red-800',   sub: 'text-red-600',    icon: 'text-red-400',    btn: 'text-red-700 hover:text-red-900' },
 }
 
+export function ThinkingSkeleton() {
+  return (
+    <div className="py-1 space-y-2 min-w-[180px] sm:min-w-[260px]" aria-label="ObedGPT réfléchit">
+      <div className="skeleton-line" style={{ width: '90%' }} />
+      <div className="skeleton-line" style={{ width: '72%', animationDelay: '.15s' }} />
+      <div className="skeleton-line" style={{ width: '55%', animationDelay: '.3s' }} />
+    </div>
+  )
+}
+
 export function LoadingDots({ label = "ObedGPT réfléchit..." }) {
   return (
     <div className="flex items-center gap-3 py-2 px-1">
       <div className="flex gap-1">
-        {[0,1,2].map(i => <span key={i} className="loading-dot w-2 h-2 rounded-full bg-orange-400 block" />)}
+        {[0,1,2].map(i => <span key={i} className="loading-dot w-2 h-2 rounded-full block" style={{ background: 'linear-gradient(135deg,#f97316,#f43f5e)', boxShadow: '0 0 10px rgba(249,115,22,0.6)' }} />)}
       </div>
       <span className="text-xs font-mono text-stone-400">{label}</span>
     </div>
@@ -72,8 +83,9 @@ export function LoadingDots({ label = "ObedGPT réfléchit..." }) {
 
 function CopyButton({ code }) {
   const [copied, setCopied] = useState(false)
+  const toast = useToast()
   return (
-    <button onClick={() => { navigator.clipboard.writeText(code); setCopied(true); setTimeout(() => setCopied(false), 2000) }}
+    <button onClick={() => { navigator.clipboard.writeText(code); setCopied(true); toast('Code copié'); setTimeout(() => setCopied(false), 2000) }}
       aria-label={copied ? 'Code copié' : 'Copier le code'}
       className="text-stone-400 hover:text-orange-500 transition-colors">
       {copied ? <Check size={13} /> : <Copy size={13} />}

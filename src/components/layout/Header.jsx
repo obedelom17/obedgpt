@@ -1,35 +1,32 @@
-import { Plus, Menu } from 'lucide-react'
+import { Plus, Menu, Search } from 'lucide-react'
 import { useApp } from '../../App'
+import ThemeToggle from '../fx/ThemeToggle'
 
 export default function Header({ mode }) {
-  const { startNewChat, setSidebarOpen } = useApp()
+  const { startNewChat, setSidebarOpen, busy, openPalette } = useApp()
 
   return (
-    <header className="h-12 md:h-14 flex items-center gap-3 md:gap-4 px-3 md:px-5 border-b border-orange-100 bg-white/90 backdrop-blur-xl flex-shrink-0 shadow-sm">
+    <header className="relative h-12 md:h-14 flex items-center gap-3 md:gap-4 px-3 md:px-5 border-b border-orange-500/15 glass-panel flex-shrink-0 z-20">
 
-      {/* Menu (modes + historique) — mobile uniquement */}
-      <button
-        onClick={() => setSidebarOpen(true)}
-        className="md:hidden btn-ghost p-2 flex-shrink-0"
-        title="Menu"
-        aria-label="Ouvrir le menu"
-      >
+      <button onClick={() => setSidebarOpen(true)} className="md:hidden btn-ghost p-2 flex-shrink-0" title="Menu" aria-label="Ouvrir le menu">
         <Menu size={18} />
       </button>
 
-      {/* Bouton Nouveau chat — visible uniquement sur mobile */}
-      <button
-        onClick={startNewChat}
-        className="md:hidden btn-primary p-2 flex-shrink-0"
-        title="Nouveau chat"
-        aria-label="Nouveau chat"
-      >
+      <button onClick={startNewChat} className="md:hidden btn-primary p-2 flex-shrink-0" title="Nouveau chat" aria-label="Nouveau chat">
         <Plus size={16} />
       </button>
 
-      <h1 className="font-display font-semibold text-sm md:text-base text-stone-800 truncate flex-1 md:flex-none">
+      <h1 key={mode} className="title-swap font-display font-semibold text-sm md:text-base text-stone-800 truncate flex-1">
         {mode}
       </h1>
+
+      <button onClick={openPalette} className="btn-ghost hidden sm:inline-flex items-center gap-2 text-xs py-1.5 px-3" aria-label="Ouvrir la palette de commandes">
+        <Search size={13} /> Rechercher <kbd className="fx-kbd">Ctrl K</kbd>
+      </button>
+      <button onClick={openPalette} className="btn-ghost sm:hidden p-2" aria-label="Rechercher"><Search size={16} /></button>
+
+      <ThemeToggle />
+      <div className={`busy-line ${busy ? 'on' : ''}`} />
     </header>
   )
 }

@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react'
 import {
   Plus, MessageSquare, Eye, Mic, Code2, Volume2, Settings as SettingsIcon,
-  Trash2, Pencil, Flame, X, MessagesSquare, Search, Star
+  Trash2, Pencil, Flame, X, MessagesSquare, Search, Star, Zap
 } from 'lucide-react'
 import { useApp } from '../../App'
 
@@ -14,11 +14,12 @@ const NAV_ITEMS = [
   { key: 'settings', label: 'Paramètres',      icon: SettingsIcon },
 ]
 
-function ConversationItem({ conv, active, onOpen, onRename, onDelete, onTogglePin }) {
+function ConversationItem({ conv, active, onOpen, onRename, onDelete, onTogglePin, index = 0 }) {
   return (
     <div
       onClick={onOpen}
-      className={`group flex items-center gap-2 px-2.5 py-2 rounded-lg cursor-pointer text-sm transition-colors ${
+      style={{ animationDelay: `${Math.min(index, 10) * 45}ms` }}
+      className={`list-in group flex items-center gap-2 px-2.5 py-2 rounded-lg cursor-pointer text-sm transition-colors ${
         active ? 'bg-orange-50 text-orange-600' : 'text-stone-500 hover:bg-orange-50/60 hover:text-stone-700'
       }`}
     >
@@ -89,7 +90,9 @@ function SidebarContent() {
         </button>
       </div>
 
-      <nav className="px-3 mt-4 space-y-0.5">
+      <nav className="px-3 mt-4">
+       <div className="nav-wrap flex flex-col gap-0.5">
+        <div className="nav-indicator" style={{ transform: `translateY(${Math.max(0, NAV_ITEMS.findIndex(n => n.key === activeMode)) * 42}px)` }} />
         {NAV_ITEMS.map(({ key, label, icon: Icon }) => (
           <button
             key={key}
@@ -100,6 +103,7 @@ function SidebarContent() {
             {label}
           </button>
         ))}
+       </div>
       </nav>
 
       <button
@@ -140,10 +144,11 @@ function SidebarContent() {
         {history.length > 0 && visibleConversations.length === 0 && (
           <p className="text-xs text-stone-400 px-1 py-2">Aucun résultat pour "{search}".</p>
         )}
-        {visibleConversations.map(conv => (
+        {visibleConversations.map((conv, idx) => (
           <ConversationItem
             key={conv.id}
             conv={conv}
+            index={idx}
             active={activeMode === 'chat' && conv.id === activeChatId}
             onOpen={() => openConversation(conv.id)}
             onRename={() => handleRename(conv.id, conv.title)}
@@ -162,7 +167,11 @@ export default function Sidebar() {
   return (
     <>
       {/* Desktop sidebar */}
-      <aside className="hidden md:flex md:flex-col w-[220px] bg-navy-900 border-r border-orange-100/40 flex-shrink-0 py-4 relative z-10">
+      <aside className="hidden md:flex md:flex-col w-[232px] glass-panel border-r border-orange-500/15 flex-shrink-0 py-4 relative z-20">
+        <div className="px-4 mb-4 flex items-center gap-2.5">
+          <div className="brand-logo"><Zap size={16} strokeWidth={2.6} /></div>
+          <span className="font-display font-extrabold text-gradient text-lg tracking-tight">ObedGPT</span>
+        </div>
         <SidebarContent />
       </aside>
 
@@ -171,7 +180,7 @@ export default function Sidebar() {
         <div className="sidebar-overlay md:hidden" onClick={() => setSidebarOpen(false)} />
       )}
       <aside
-        className={`md:hidden fixed inset-y-0 left-0 w-[240px] max-w-[85vw] bg-navy-900 border-r border-orange-100/40 z-20 flex flex-col py-4 transition-transform duration-300 ${
+        className={`md:hidden fixed inset-y-0 left-0 w-[260px] max-w-[85vw] glass-panel border-r border-orange-500/20 z-30 flex flex-col py-4 transition-transform duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] shadow-2xl ${
           sidebarOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >

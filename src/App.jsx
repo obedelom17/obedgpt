@@ -1,10 +1,16 @@
-import { useState, lazy, Suspense, createContext, useContext } from 'react'
+import { useState, useEffect, lazy, Suspense, createContext, useContext } from 'react'
 import { ThemeProvider } from './hooks/useTheme.jsx'
 import { useChatHistory } from './hooks/useChatHistory'
 import Sidebar from './components/layout/Sidebar'
 import Header from './components/layout/Header'
 import ChatMode from './components/modes/ChatMode'
 import { LoadingDots } from './components/ui'
+import Background from './components/fx/Background'
+import CursorGlow from './components/fx/CursorGlow'
+import Splash from './components/fx/Splash'
+import CommandPalette from './components/fx/CommandPalette'
+import { ToastProvider } from './components/fx/Toast'
+import { useGlobalFx } from './hooks/useGlobalFx'
 
 // Chat est le mode par défaut donc chargé immédiatement. Les autres modes
 // sont chargés à la demande : sur mobile/connexion lente, ça évite de
@@ -47,6 +53,19 @@ export default function App() {
   const [activeChatId, setActiveChatId] = useState(() => historyManager.createNewId())
   const [tempMode, setTempMode] = useState(false)
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [busy, setBusy] = useState(false)
+  const [paletteOpen, setPaletteOpen] = useState(false)
+
+  useGlobalFx()
+
+  // Ctrl/Cmd + K : palette de commandes
+  useEffect(() => {
+    const onKey = e => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); setPaletteOpen(o => !o) }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [])
 
   const handleModeChange = (mode) => {
     setActiveMode(mode)
@@ -74,6 +93,7 @@ export default function App() {
     startNewChat, openConversation,
     tempMode, setTempMode,
     sidebarOpen, setSidebarOpen,
+    busy, setBusy, openPalette: () => setPaletteOpen(true),
     history: historyManager.history,
     saveConversation: historyManager.saveConversation,
     deleteConversation: historyManager.deleteConversation,
@@ -85,21 +105,29 @@ export default function App() {
 
   return (
     <ThemeProvider>
-      <AppContext.Provider value={contextValue}>
-        <div className="flex app-height w-screen overflow-hidden bg-navy-900 relative">
+      <ToastProvider>
+        <AppContext.Provider value={contextValue}>
+          <Background busy={busy} />
+          <CursorGlow />
+          <Splash />
+          <div className="flex app-height w-screen overflow-hidden relative z-10">
 
-          <Sidebar />
+            <Sidebar />
 
-          <div className="flex flex-col flex-1 min-w-0 relative z-10">
-            <Header mode={MODES[activeMode]?.label} />
-            <main className="flex-1 overflow-hidden">
-              <Suspense fallback={<div className="h-full flex items-center justify-center"><LoadingDots label="Chargement..." /></div>}>
-                <ActiveComponent key={activeChatId} />
-              </Suspense>
-            </main>
+            <div className="flex flex-col flex-1 min-w-0 relative z-10">
+              <Header mode={MODES[activeMode]?.label} />
+              <main className="flex-1 overflow-hidden">
+                <div key={activeMode} className="page-enter">
+                  <Suspense fallback={<div className="h-full flex items-center justify-center"><LoadingDots label="Chargement..." /></div>}>
+                    <ActiveComponent key={activeChatId} />
+                  </Suspense>
+                </div>
+              </main>
+            </div>
           </div>
-        </div>
-      </AppContext.Provider>
+          <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} />
+        </AppContext.Provider>
+      </ToastProvider>
     </ThemeProvider>
   )
 }

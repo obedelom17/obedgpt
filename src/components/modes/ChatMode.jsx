@@ -1,11 +1,28 @@
 import { useState, useRef, useEffect } from 'react'
-import { Send, RotateCcw, User, Zap, FileText, X, Paperclip, Image as ImageIcon, Flame, Mic, RefreshCw, Square, Pencil, Check, Download, Printer } from 'lucide-react'
-import { LoadingDots, MarkdownRenderer, ErrorBanner } from '../ui'
+import { Send, RotateCcw, User, Zap, FileText, X, Paperclip, Image as ImageIcon, Mic, RefreshCw, Square, Pencil, Check, Download, Printer, ArrowDown, Copy, Lightbulb, BookOpen, Code2, Sparkles } from 'lucide-react'
+import { MarkdownRenderer, ErrorBanner, ThinkingSkeleton } from '../ui'
+import Tilt from '../fx/Tilt'
+import Typewriter from '../fx/Typewriter'
+import { useToast } from '../fx/Toast'
+import { burst } from '../fx/burst'
 import { useStreamingChat } from '../../hooks/useApiCall'
 import { useApp } from '../../App'
 
 const BASE_SYSTEM_PROMPT = "Tu es ObedGPT, un assistant IA intelligent créé par Obed Elom AGBEBAVI. Si on te demande qui t'a créé/développé, réponds que c'est Obed Elom AGBEBAVI. Réponds dans la langue de l'utilisateur. Utilise LaTeX pour les maths : $...$ inline, $$...$$ pour les blocs."
 const PERSONA_KEY = 'obedgpt-persona'
+
+const SUGGESTIONS = [
+  { text: 'Devine les questions du prof', icon: Lightbulb, sub: 'Prépare ton examen' },
+  { text: 'Fais mon exercice de maison', icon: BookOpen, sub: 'Résous pas à pas' },
+  { text: 'Developpe moi une application', icon: Code2, sub: 'Du code complet' },
+  { text: 'Traite moi ça', icon: Sparkles, sub: 'Analyse et résume' },
+]
+const TAGLINES = ['Pose-moi une question.', 'Génère du code en quelques secondes.', 'Analyse une image ou un document.', 'Résous un exercice pas à pas.', 'Dicte ton message à la voix.']
+
+function greeting() {
+  const h = new Date().getHours()
+  return h < 5 ? 'Bonne nuit' : h < 18 ? 'Bonjour' : 'Bonsoir'
+}
 
 // On n'envoie jamais TOUT l'historique au modèle : au-delà d'un certain
 // nombre de messages, le coût en tokens d'un seul tour de chat exploserait
@@ -27,7 +44,8 @@ function escapeHtml(str) {
 }
 
 export default function ChatMode() {
-  const { activeChatId, tempMode, saveConversation, history } = useApp()
+  const { activeChatId, tempMode, saveConversation, history, setBusy } = useApp()
+  const toast = useToast()
   const savedConv = activeChatId ? history.find(c => c.id === activeChatId) : null
 
   const [messages, setMessages]     = useState(() => savedConv?.messages || [])
@@ -54,10 +72,31 @@ export default function ChatMode() {
     }
   }, [messages, activeChatId, tempMode, saveConversation])
 
-  // Scroll to bottom
+  // Fait pulser le fond et le header pendant la génération
+  useEffect(() => { setBusy(loading); return () => setBusy(false) }, [loading, setBusy])
+
+  // Défilement intelligent : on suit le texte seulement si l'utilisateur est
+  // déjà en bas (sinon il lit plus haut), avec un bouton pour redescendre.
+  const scrollRef = useRef(null)
+  const stickRef = useRef(true)
+  const [showFab, setShowFab] = useState(false)
+  const onScroll = () => {
+    const el = scrollRef.current
+    if (!el) return
+    const near = el.scrollHeight - el.scrollTop - el.clientHeight < 90
+    stickRef.current = near
+    setShowFab(prev => (prev === !near ? prev : !near))
+  }
+  const scrollToBottom = (smooth = true) => scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: smooth ? 'smooth' : 'auto' })
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
+    const last = messages[messages.length - 1]
+    if (last?.role === 'user') { stickRef.current = true; scrollToBottom(true) }
+    else if (stickRef.current) scrollToBottom(false)
   }, [messages, loading])
+
+  const copyMessage = (text) => { navigator.clipboard?.writeText(text); toast('Réponse copiée') }
+  const sendBtnRef = useRef(null)
+  const inputRef = useRef(null)
 
   // Coupe proprement la dictée vocale si le composant est démonté en plein
   // enregistrement (changement de mode pendant qu'on dicte).
@@ -155,8 +194,11 @@ export default function ChatMode() {
 
     const userContent = text + (fileData.length > 0 ? `\n\n[Fichiers joints: ${fileData.map(f => f.name).join(', ')}]` : '')
     const newMessages = [...messages, { role: 'user', content: userContent }]
+    const b = sendBtnRef.current?.getBoundingClientRect()
+    if (b) burst(b.left + b.width / 2, b.top + b.height / 2)
     setMessages(newMessages)
     setInput('')
+    if (inputRef.current) inputRef.current.style.height = 'auto'
     setAttachedFiles([])
     setFileError(null)
 
@@ -231,19 +273,30 @@ export default function ChatMode() {
   const lastIsAssistant = messages.length > 0 && messages[messages.length - 1].role === 'assistant' && !loading
 
   return (
-    <div className="flex flex-col h-full bg-navy-900">
+    <div className="flex flex-col h-full relative">
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto px-3 md:px-4 py-3 md:py-4 space-y-3 md:space-y-4">
+      <div ref={scrollRef} onScroll={onScroll} className="flex-1 overflow-y-auto overscroll-contain px-3 md:px-4 py-3 md:py-4 space-y-3 md:space-y-4">
         {messages.length === 0 && !loading && (
-          <div className="flex flex-col justify-end h-full pb-6 px-2">
-            <p className="text-stone-400 text-xs mb-3">
-              {tempMode && <span className="text-orange-500 mr-2">Mode temporaire</span>}
-              Suggestions
+          <div className="flex flex-col items-center justify-center min-h-full py-6 px-2 text-center">
+            <div className="hero-orb"><Zap size={38} strokeWidth={2.2} /></div>
+            <h2 className="hero-title stagger-in" style={{ animationDelay: '.15s' }}>{greeting()}, que créons-nous ?</h2>
+            <p className="mt-3 text-sm md:text-base text-stone-500 h-6 stagger-in" style={{ animationDelay: '.3s' }}>
+              <Typewriter phrases={TAGLINES} />
             </p>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 max-w-lg">
-              {['Devine les questions du prof', 'Fais mon exercice de maison', 'Developpe moi une application', 'Traite moi ça'].map(s => (
-                <button key={s} onClick={() => setInput(s)}
-                  className="text-xs text-left px-3 py-2 rounded-lg border border-orange-100/60 text-stone-500 hover:text-orange-600 hover:border-orange-200 bg-transparent transition-all">{s}</button>
+            {tempMode && <span className="mt-3 text-xs text-orange-500 stagger-in">Mode temporaire actif : rien n'est sauvegardé</span>}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 md:gap-3 w-full max-w-xl mt-7">
+              {SUGGESTIONS.map(({ text, icon: Icon, sub }, i) => (
+                <Tilt key={text} as="button" onClick={() => { setInput(text); inputRef.current?.focus() }}
+                  className="stagger-in text-left px-4 py-3.5 rounded-2xl border border-orange-500/20 text-stone-600"
+                  style={{ animationDelay: `${0.4 + i * 0.09}s` }}>
+                  <span className="flex items-center gap-3 relative z-10">
+                    <span className="w-9 h-9 rounded-xl grid place-items-center flex-shrink-0 text-white" style={{ background: 'linear-gradient(135deg,#f97316,#f43f5e)', boxShadow: '0 6px 16px -4px rgba(249,115,22,0.6)' }}><Icon size={16} /></span>
+                    <span className="min-w-0">
+                      <span className="block text-sm font-medium text-stone-800">{text}</span>
+                      <span className="block text-[11px] text-stone-400">{sub}</span>
+                    </span>
+                  </span>
+                </Tilt>
               ))}
             </div>
           </div>
@@ -253,10 +306,9 @@ export default function ChatMode() {
           const isLast = i === messages.length - 1
           const isEditing = editingIndex === i
           return (
-            <div key={i} className={`flex gap-2 md:gap-3 animate-slide-up group ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+            <div key={i} className={`flex gap-2 md:gap-3 group ${msg.role === 'user' ? 'justify-end msg-in-right' : 'justify-start msg-in-left'}`}>
               {msg.role === 'assistant' && (
-                <div className="w-6 h-6 flex items-center justify-center flex-shrink-0 mt-0.5 text-orange-400">
-                  <Zap size={14} /></div>
+                <div className={`avatar-ai mt-0.5 ${loading && isLast ? 'live' : ''}`}><Zap size={13} /></div>
               )}
               <div className="max-w-[85%] sm:max-w-[75%]">
                 {isEditing ? (
@@ -272,10 +324,10 @@ export default function ChatMode() {
                     </div>
                   </div>
                 ) : (
-                  <div className={msg.role === 'user' ? 'message-user' : 'message-ai'}>
+                  <div className={msg.role === 'user' ? 'message-user' : `message-ai ${loading && isLast ? 'streaming' : ''}`}>
                     {msg.role === 'user'
                       ? <p className="text-xs md:text-sm text-stone-800 break-words whitespace-pre-wrap">{msg.content}</p>
-                      : (msg.content ? <MarkdownRenderer content={msg.content} /> : <LoadingDots />)
+                      : (msg.content ? <MarkdownRenderer content={msg.content} /> : <ThinkingSkeleton />)
                     }
                   </div>
                 )}
@@ -286,11 +338,16 @@ export default function ChatMode() {
                     <Pencil size={10} /> Modifier
                   </button>
                 )}
-                {!isEditing && msg.role === 'assistant' && isLast && lastIsAssistant && msg.content && (
-                  <button onClick={regenerate} aria-label="Régénérer cette réponse"
-                    className="flex items-center gap-1 text-[10px] text-stone-400 hover:text-orange-500 mt-1 transition-colors">
-                    <RefreshCw size={11} /> Régénérer
-                  </button>
+                {!isEditing && msg.role === 'assistant' && loading && isLast && msg.content && (
+                  <span className="wave mt-2 ml-1" aria-hidden="true"><i /><i /><i /><i /><i /></span>
+                )}
+                {!isEditing && msg.role === 'assistant' && msg.content && !(loading && isLast) && (
+                  <div className="flex items-center gap-3 mt-1 ml-1">
+                    <button onClick={() => copyMessage(msg.content)} aria-label="Copier cette réponse" className="mini-action"><Copy size={11} /> Copier</button>
+                    {isLast && lastIsAssistant && (
+                      <button onClick={regenerate} aria-label="Régénérer cette réponse" className="mini-action"><RefreshCw size={11} /> Régénérer</button>
+                    )}
+                  </div>
                 )}
               </div>
               {msg.role === 'user' && (
@@ -303,6 +360,10 @@ export default function ChatMode() {
 
         <div ref={bottomRef} />
       </div>
+
+      <button className={`scroll-fab ${showFab ? 'show' : ''}`} style={{ bottom: '5.5rem' }} onClick={() => scrollToBottom(true)} aria-label="Aller en bas de la conversation" tabIndex={showFab ? 0 : -1}>
+        <ArrowDown size={16} />
+      </button>
 
       {error && (
         <div className="px-3 md:px-4 pb-2">
@@ -332,7 +393,7 @@ export default function ChatMode() {
       )}
 
       {/* Input */}
-      <div className="px-3 md:px-4 pb-3 md:pb-4 pt-2 border-t border-orange-100 bg-white/60 safe-bottom">
+      <div className="composer px-3 md:px-4 pb-3 md:pb-4 pt-2 border-t border-orange-500/15 safe-bottom">
         <div className="flex gap-2 items-end">
           {messages.length > 0 && (
             <div className="hidden sm:flex gap-1 flex-shrink-0">
@@ -350,12 +411,12 @@ export default function ChatMode() {
           </button>
           <button onClick={toggleDictation} title={listening ? 'Arrêter la dictée' : 'Dicter un message'}
             aria-label={listening ? 'Arrêter la dictée vocale' : 'Démarrer la dictée vocale'} aria-pressed={listening}
-            className={`p-2 md:p-2.5 flex-shrink-0 rounded-xl transition-all ${listening ? 'bg-red-50 text-red-500 border border-red-200 animate-pulse' : 'btn-ghost'}`}>
-            <Mic size={15} />
+            className={`p-2 md:p-2.5 flex-shrink-0 rounded-xl transition-all ${listening ? 'bg-red-500/10 text-red-500 border border-red-500/30' : 'btn-ghost'}`}>
+            {listening ? <span className="mic-wave" aria-hidden="true"><i /><i /><i /><i /></span> : <Mic size={15} />}
           </button>
-          <textarea value={input} onChange={e => setInput(e.target.value)} onKeyDown={onKeyDown} onPaste={handlePaste}
+          <textarea ref={inputRef} value={input} onChange={e => setInput(e.target.value)} onKeyDown={onKeyDown} onPaste={handlePaste}
             rows={1} disabled={loading}
-            placeholder="Message... (colle une image avec Ctrl+V)"
+            placeholder={window.innerWidth < 640 ? "Message..." : "Message... (colle une image avec Ctrl+V)"}
             aria-label="Message à envoyer"
             className="input-field resize-none flex-1 text-sm"
             style={{ minHeight: '40px', maxHeight: '120px' }}
@@ -367,7 +428,7 @@ export default function ChatMode() {
               <Square size={14} fill="currentColor" />
             </button>
           ) : (
-            <button onClick={send} disabled={!input.trim() && attachedFiles.length === 0} aria-label="Envoyer le message"
+            <button ref={sendBtnRef} data-magnetic onClick={send} disabled={!input.trim() && attachedFiles.length === 0} aria-label="Envoyer le message"
               className="btn-primary p-2.5 md:p-3 flex-shrink-0">
               <Send size={15} />
             </button>
