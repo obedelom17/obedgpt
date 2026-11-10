@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
-import { Send, RotateCcw, User, Zap, FileText, X, Paperclip, Image as ImageIcon, Mic, RefreshCw, Square, Pencil, Check, Download, Printer, ArrowDown, Copy, Lightbulb, BookOpen, Code2, Sparkles } from 'lucide-react'
+import { Send, RotateCcw, User, Zap, FileText, X, Paperclip, Image as ImageIcon, Mic, RefreshCw, Square, Pencil, Check, Download, Printer, ArrowDown, Copy, Lightbulb, BookOpen, Code2, Sparkles, Eye, Volume2, Calculator, FileDown } from 'lucide-react'
 import { MarkdownRenderer, ErrorBanner, ThinkingSkeleton } from '../ui'
 import Tilt from '../fx/Tilt'
 import Typewriter from '../fx/Typewriter'
@@ -16,6 +16,10 @@ const SUGGESTIONS = [
   { text: 'Fais mon exercice de maison', icon: BookOpen, sub: 'Résous pas à pas' },
   { text: 'Developpe moi une application', icon: Code2, sub: 'Du code complet' },
   { text: 'Traite moi ça', icon: Sparkles, sub: 'Analyse et résume' },
+]
+const CHIPS = [
+  { t: 'Chat IA', i: Zap }, { t: 'Vision', i: Eye }, { t: 'Transcription audio', i: Mic }, { t: 'Génération de code', i: Code2 },
+  { t: 'Synthèse vocale', i: Volume2 }, { t: 'Maths LaTeX', i: Calculator }, { t: 'PDF et images', i: FileText }, { t: 'Export Markdown', i: FileDown },
 ]
 const TAGLINES = ['Pose-moi une question.', 'Génère du code en quelques secondes.', 'Analyse une image ou un document.', 'Résous un exercice pas à pas.', 'Dicte ton message à la voix.']
 
@@ -89,6 +93,7 @@ export default function ChatMode() {
   }
   const scrollToBottom = (smooth = true) => scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: smooth ? 'smooth' : 'auto' })
   useEffect(() => {
+    if (messages.length === 0) return
     const last = messages[messages.length - 1]
     if (last?.role === 'user') { stickRef.current = true; scrollToBottom(true) }
     else if (stickRef.current) scrollToBottom(false)
@@ -274,165 +279,125 @@ export default function ChatMode() {
 
   return (
     <div className="flex flex-col h-full relative">
-      {/* Messages */}
-      <div ref={scrollRef} onScroll={onScroll} className="flex-1 overflow-y-auto overscroll-contain px-3 md:px-4 py-3 md:py-4 space-y-3 md:space-y-4">
-        {messages.length === 0 && !loading && (
-          <div className="flex flex-col items-center justify-center min-h-full py-6 px-2 text-center">
-            <div className="hero-orb"><Zap size={38} strokeWidth={2.2} /></div>
-            <h2 className="hero-title stagger-in" style={{ animationDelay: '.15s' }}>{greeting()}, que créons-nous ?</h2>
-            <p className="mt-3 text-sm md:text-base text-stone-500 h-6 stagger-in" style={{ animationDelay: '.3s' }}>
-              <Typewriter phrases={TAGLINES} />
-            </p>
-            {tempMode && <span className="mt-3 text-xs text-orange-500 stagger-in">Mode temporaire actif : rien n'est sauvegardé</span>}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 md:gap-3 w-full max-w-xl mt-7">
-              {SUGGESTIONS.map(({ text, icon: Icon, sub }, i) => (
-                <Tilt key={text} as="button" onClick={() => { setInput(text); inputRef.current?.focus() }}
-                  className="stagger-in text-left px-4 py-3.5 rounded-2xl border border-orange-500/20 text-stone-600"
-                  style={{ animationDelay: `${0.4 + i * 0.09}s` }}>
-                  <span className="flex items-center gap-3 relative z-10">
-                    <span className="w-9 h-9 rounded-xl grid place-items-center flex-shrink-0 text-white" style={{ background: 'linear-gradient(135deg,#f97316,#f43f5e)', boxShadow: '0 6px 16px -4px rgba(249,115,22,0.6)' }}><Icon size={16} /></span>
-                    <span className="min-w-0">
-                      <span className="block text-sm font-medium text-stone-800">{text}</span>
-                      <span className="block text-[11px] text-stone-400">{sub}</span>
+      <div ref={scrollRef} onScroll={onScroll} className="flex-1 overflow-y-auto overscroll-contain px-3 md:px-6 py-3">
+        <div className="chat-col space-y-4 md:space-y-5 min-h-full flex flex-col">
+          {messages.length === 0 && !loading && (
+            <div className="my-auto flex flex-col items-center py-4 text-center">
+              <div className="hero-orb"><span className="ring r2" /><span className="ring" /><span className="core" /><Zap size={36} strokeWidth={2.2} /></div>
+              <h2 className="hero-title stagger-in" style={{ animationDelay: '.15s' }}>{greeting()}, que créons-nous ?</h2>
+              <p className="mt-3 text-sm md:text-base text-stone-500 h-6 stagger-in" style={{ animationDelay: '.3s' }}><Typewriter phrases={TAGLINES} /></p>
+              {tempMode && <span className="mt-3 text-xs text-fuchsia-400 stagger-in">Mode temporaire actif : rien n'est sauvegardé</span>}
+              <div className="grid grid-cols-2 gap-2.5 md:gap-3 w-full max-w-xl mt-7">
+                {SUGGESTIONS.map(({ text, icon: Icon, sub }, i) => (
+                  <Tilt key={text} as="button" onClick={() => { setInput(text); inputRef.current?.focus() }}
+                    className={`stagger-in text-left px-4 py-4 rounded-3xl border border-violet-500/25 ${i === 0 || i === 3 ? 'col-span-2' : ''}`}
+                    style={{ animationDelay: `${0.4 + i * 0.09}s` }}>
+                    <span className="flex items-center gap-3 relative z-10">
+                      <span className="w-10 h-10 rounded-2xl grid place-items-center flex-shrink-0 text-white" style={{ background: 'var(--grad)', boxShadow: '0 8px 20px -6px rgba(139,92,246,0.8)' }}><Icon size={18} /></span>
+                      <span className="min-w-0">
+                        <span className="block text-sm font-semibold text-stone-800">{text}</span>
+                        <span className="block text-[11px] text-stone-400">{sub}</span>
+                      </span>
                     </span>
-                  </span>
-                </Tilt>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {messages.map((msg, i) => {
-          const isLast = i === messages.length - 1
-          const isEditing = editingIndex === i
-          return (
-            <div key={i} className={`flex gap-2 md:gap-3 group ${msg.role === 'user' ? 'justify-end msg-in-right' : 'justify-start msg-in-left'}`}>
-              {msg.role === 'assistant' && (
-                <div className={`avatar-ai mt-0.5 ${loading && isLast ? 'live' : ''}`}><Zap size={13} /></div>
-              )}
-              <div className="max-w-[85%] sm:max-w-[75%]">
-                {isEditing ? (
-                  <div className="message-user">
-                    <textarea value={editValue} onChange={e => setEditValue(e.target.value)} rows={3} autoFocus
-                      aria-label="Modifier le message"
-                      className="w-full bg-transparent text-xs md:text-sm text-stone-800 outline-none resize-none" />
-                    <div className="flex gap-2 justify-end mt-2">
-                      <button onClick={cancelEdit} className="text-[11px] text-stone-400 hover:text-stone-600 px-2 py-1">Annuler</button>
-                      <button onClick={saveEdit} className="flex items-center gap-1 text-[11px] bg-orange-500 text-white px-2.5 py-1 rounded-lg hover:bg-orange-600">
-                        <Check size={11} /> Renvoyer
-                      </button>
-                    </div>
-                  </div>
-                ) : (
-                  <div className={msg.role === 'user' ? 'message-user' : `message-ai ${loading && isLast ? 'streaming' : ''}`}>
-                    {msg.role === 'user'
-                      ? <p className="text-xs md:text-sm text-stone-800 break-words whitespace-pre-wrap">{msg.content}</p>
-                      : (msg.content ? <MarkdownRenderer content={msg.content} /> : <ThinkingSkeleton />)
-                    }
-                  </div>
-                )}
-
-                {!isEditing && msg.role === 'user' && (
-                  <button onClick={() => startEdit(i)} aria-label="Modifier ce message"
-                    className="flex items-center gap-1 text-[10px] text-stone-400 hover:text-orange-500 mt-1 ml-auto opacity-0 group-hover:opacity-100 transition-opacity float-right">
-                    <Pencil size={10} /> Modifier
-                  </button>
-                )}
-                {!isEditing && msg.role === 'assistant' && loading && isLast && msg.content && (
-                  <span className="wave mt-2 ml-1" aria-hidden="true"><i /><i /><i /><i /><i /></span>
-                )}
-                {!isEditing && msg.role === 'assistant' && msg.content && !(loading && isLast) && (
-                  <div className="flex items-center gap-3 mt-1 ml-1">
-                    <button onClick={() => copyMessage(msg.content)} aria-label="Copier cette réponse" className="mini-action"><Copy size={11} /> Copier</button>
-                    {isLast && lastIsAssistant && (
-                      <button onClick={regenerate} aria-label="Régénérer cette réponse" className="mini-action"><RefreshCw size={11} /> Régénérer</button>
-                    )}
-                  </div>
-                )}
+                  </Tilt>
+                ))}
               </div>
-              {msg.role === 'user' && (
-                <div className="w-6 h-6 md:w-7 md:h-7 rounded-lg bg-orange-50 border border-orange-200 flex items-center justify-center flex-shrink-0 mt-0.5">
-                  <User size={10} className="text-orange-400" /></div>
-              )}
+              <div className="marquee w-full max-w-2xl mt-7 stagger-in" style={{ animationDelay: '.85s' }}>
+                <div className="marquee-track">
+                  {[...CHIPS, ...CHIPS].map(({ t, i: I }, k) => <span key={k} className="chip text-stone-500"><I size={12} className="text-cyan-400" />{t}</span>)}
+                </div>
+              </div>
             </div>
-          )
-        })}
+          )}
 
-        <div ref={bottomRef} />
+          {messages.map((msg, i) => {
+            const isLast = i === messages.length - 1
+            const isEditing = editingIndex === i
+            return (
+              <div key={i} className={`flex gap-2 md:gap-3 group ${msg.role === 'user' ? 'justify-end msg-in-right' : 'justify-start msg-in-left'}`}>
+                {msg.role === 'assistant' && <div className={`avatar-ai mt-1 ${loading && isLast ? 'live' : ''}`}><Zap size={14} /></div>}
+                <div className="max-w-[88%] sm:max-w-[80%] min-w-0">
+                  {isEditing ? (
+                    <div className="message-user">
+                      <textarea value={editValue} onChange={e => setEditValue(e.target.value)} rows={3} autoFocus aria-label="Modifier le message"
+                        className="w-full bg-transparent text-sm text-white outline-none resize-none" />
+                      <div className="flex gap-2 justify-end mt-2">
+                        <button onClick={cancelEdit} className="text-[11px] text-white/70 hover:text-white px-2 py-1">Annuler</button>
+                        <button onClick={saveEdit} className="flex items-center gap-1 text-[11px] bg-white/20 text-white px-2.5 py-1 rounded-lg hover:bg-white/30"><Check size={11} /> Renvoyer</button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className={msg.role === 'user' ? 'message-user' : `message-ai ${loading && isLast ? 'streaming' : ''}`}>
+                      {msg.role === 'user'
+                        ? <p className="text-sm text-white break-words whitespace-pre-wrap">{msg.content}</p>
+                        : (msg.content ? <MarkdownRenderer content={msg.content} /> : <ThinkingSkeleton />)}
+                    </div>
+                  )}
+                  {!isEditing && msg.role === 'user' && (
+                    <button onClick={() => startEdit(i)} aria-label="Modifier ce message"
+                      className="mini-action mt-1 ml-auto opacity-0 group-hover:opacity-100 transition-opacity float-right"><Pencil size={10} /> Modifier</button>
+                  )}
+                  {!isEditing && msg.role === 'assistant' && loading && isLast && msg.content && <span className="wave mt-2 ml-1" aria-hidden="true"><i /><i /><i /><i /><i /></span>}
+                  {!isEditing && msg.role === 'assistant' && msg.content && !(loading && isLast) && (
+                    <div className="flex items-center gap-3 mt-1 ml-1">
+                      <button onClick={() => copyMessage(msg.content)} aria-label="Copier cette réponse" className="mini-action"><Copy size={11} /> Copier</button>
+                      {isLast && lastIsAssistant && <button onClick={regenerate} aria-label="Régénérer cette réponse" className="mini-action"><RefreshCw size={11} /> Régénérer</button>}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )
+          })}
+          <div ref={bottomRef} />
+        </div>
       </div>
 
-      <button className={`scroll-fab ${showFab ? 'show' : ''}`} style={{ bottom: '5.5rem' }} onClick={() => scrollToBottom(true)} aria-label="Aller en bas de la conversation" tabIndex={showFab ? 0 : -1}>
-        <ArrowDown size={16} />
-      </button>
+      <button className={`scroll-fab ${showFab ? 'show' : ''}`} style={{ bottom: '8.5rem' }} onClick={() => scrollToBottom(true)} aria-label="Aller en bas de la conversation" tabIndex={showFab ? 0 : -1}><ArrowDown size={17} /></button>
 
-      {error && (
-        <div className="px-3 md:px-4 pb-2">
-          <ErrorBanner error={error} onDismiss={clearError} onRetry={handleRetry} />
-        </div>
-      )}
+      {error && <div className="px-3 md:px-6 pb-2 chat-col"><ErrorBanner error={error} onDismiss={clearError} onRetry={handleRetry} /></div>}
 
-      {/* Attached files preview */}
-      {attachedFiles.length > 0 && (
-        <div className="px-3 md:px-4 pt-2 flex flex-wrap gap-2">
-          {attachedFiles.map((file, i) => (
-            <div key={i} className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-orange-50 border border-orange-200 text-xs text-orange-700">
-              {isImage(file.type) ? <ImageIcon size={12} /> : <FileText size={12} />}
-              <span className="max-w-[100px] md:max-w-[120px] truncate">{file.name}</span>
-              <button onClick={() => removeFile(i)} aria-label={`Retirer ${file.name}`} className="hover:text-red-500"><X size={12} /></button>
-            </div>
-          ))}
-        </div>
-      )}
-      {fileError && (
-        <div className="px-3 md:px-4 pt-2">
-          <p className="text-xs text-red-500 flex items-center justify-between">
-            {fileError}
-            <button onClick={() => setFileError(null)} aria-label="Fermer ce message" className="text-stone-400 hover:text-stone-600 ml-2"><X size={12} /></button>
-          </p>
-        </div>
-      )}
-
-      {/* Input */}
-      <div className="composer px-3 md:px-4 pb-3 md:pb-4 pt-2 border-t border-orange-500/15 safe-bottom">
-        <div className="flex gap-2 items-end">
-          {messages.length > 0 && (
-            <div className="hidden sm:flex gap-1 flex-shrink-0">
-              <button onClick={reset} aria-label="Nouvelle conversation" title="Nouvelle conversation" className="btn-ghost p-2 md:p-2.5"><RotateCcw size={15} /></button>
-              <button onClick={exportMarkdown} aria-label="Exporter en Markdown" title="Exporter en Markdown" className="btn-ghost p-2 md:p-2.5"><Download size={15} /></button>
-              <button onClick={exportPrintable} aria-label="Imprimer / Exporter en PDF" title="Imprimer / Exporter en PDF" className="btn-ghost p-2 md:p-2.5"><Printer size={15} /></button>
-            </div>
-          )}
-          <input type="file" ref={fileInputRef} onChange={handleFileSelect} multiple
-            accept="image/*,.pdf,.txt,.csv,.json,.doc,.docx"
-            className="hidden" aria-hidden="true" />
-          <button onClick={() => fileInputRef.current?.click()} aria-label="Joindre un fichier" title="Joindre un fichier"
-            className="btn-ghost p-2 md:p-2.5 flex-shrink-0">
-            <Paperclip size={15} />
-          </button>
-          <button onClick={toggleDictation} title={listening ? 'Arrêter la dictée' : 'Dicter un message'}
-            aria-label={listening ? 'Arrêter la dictée vocale' : 'Démarrer la dictée vocale'} aria-pressed={listening}
-            className={`p-2 md:p-2.5 flex-shrink-0 rounded-xl transition-all ${listening ? 'bg-red-500/10 text-red-500 border border-red-500/30' : 'btn-ghost'}`}>
-            {listening ? <span className="mic-wave" aria-hidden="true"><i /><i /><i /><i /></span> : <Mic size={15} />}
-          </button>
-          <textarea ref={inputRef} value={input} onChange={e => setInput(e.target.value)} onKeyDown={onKeyDown} onPaste={handlePaste}
-            rows={1} disabled={loading}
-            placeholder={window.innerWidth < 640 ? "Message..." : "Message... (colle une image avec Ctrl+V)"}
-            aria-label="Message à envoyer"
-            className="input-field resize-none flex-1 text-sm"
-            style={{ minHeight: '40px', maxHeight: '120px' }}
-            onInput={e => { e.target.style.height = 'auto'; e.target.style.height = Math.min(e.target.scrollHeight, 120) + 'px' }}
-          />
-          {loading ? (
-            <button onClick={abort} aria-label="Arrêter la génération" title="Arrêter"
-              className="flex items-center justify-center p-2.5 md:p-3 flex-shrink-0 rounded-xl bg-stone-700 text-white hover:bg-stone-800 transition-colors">
-              <Square size={14} fill="currentColor" />
+      <div className="composer-wrap">
+        {attachedFiles.length > 0 && (
+          <div className="chat-col flex flex-wrap gap-2 pb-2">
+            {attachedFiles.map((file, i) => (
+              <div key={i} className="chip text-stone-600">
+                {isImage(file.type) ? <ImageIcon size={12} /> : <FileText size={12} />}
+                <span className="max-w-[110px] truncate">{file.name}</span>
+                <button onClick={() => removeFile(i)} aria-label={`Retirer ${file.name}`} className="hover:text-red-500"><X size={12} /></button>
+              </div>
+            ))}
+          </div>
+        )}
+        {fileError && (
+          <div className="chat-col pb-2"><p className="text-xs text-red-500 flex items-center justify-between">{fileError}
+            <button onClick={() => setFileError(null)} aria-label="Fermer ce message" className="text-stone-400 hover:text-stone-600 ml-2"><X size={12} /></button></p></div>
+        )}
+        <div className="composer-pill">
+          <input type="file" ref={fileInputRef} onChange={handleFileSelect} multiple accept="image/*,.pdf,.txt,.csv,.json,.doc,.docx" className="hidden" aria-hidden="true" />
+          <textarea ref={inputRef} value={input} onChange={e => setInput(e.target.value)} onKeyDown={onKeyDown} onPaste={handlePaste} rows={1} disabled={loading}
+            placeholder={window.innerWidth < 640 ? 'Message...' : 'Écris ton message... (colle une image avec Ctrl+V)'} aria-label="Message à envoyer"
+            className="input-field resize-none text-sm" style={{ minHeight: '44px', maxHeight: '140px' }}
+            onInput={e => { e.target.style.height = 'auto'; e.target.style.height = Math.min(e.target.scrollHeight, 140) + 'px' }} />
+          <div className="flex items-center gap-1 px-1 pt-1">
+            <button onClick={() => fileInputRef.current?.click()} aria-label="Joindre un fichier" title="Joindre un fichier" className="btn-ghost !p-2 !min-h-0 !rounded-full"><Paperclip size={16} /></button>
+            <button onClick={toggleDictation} title={listening ? 'Arrêter la dictée' : 'Dicter un message'} aria-label={listening ? 'Arrêter la dictée vocale' : 'Démarrer la dictée vocale'} aria-pressed={listening}
+              className={`!p-2 !min-h-0 !rounded-full ${listening ? 'btn-ghost !text-fuchsia-400 !bg-fuchsia-500/15 !border-fuchsia-400/40' : 'btn-ghost'}`}>
+              {listening ? <span className="mic-wave" aria-hidden="true"><i /><i /><i /><i /></span> : <Mic size={16} />}
             </button>
-          ) : (
-            <button ref={sendBtnRef} data-magnetic onClick={send} disabled={!input.trim() && attachedFiles.length === 0} aria-label="Envoyer le message"
-              className="btn-primary p-2.5 md:p-3 flex-shrink-0">
-              <Send size={15} />
-            </button>
-          )}
+            {messages.length > 0 && (
+              <>
+                <button onClick={reset} aria-label="Nouvelle conversation" title="Vider la conversation" className="btn-ghost !p-2 !min-h-0 !rounded-full"><RotateCcw size={15} /></button>
+                <button onClick={exportMarkdown} aria-label="Exporter en Markdown" title="Exporter en Markdown" className="btn-ghost !p-2 !min-h-0 !rounded-full hidden sm:inline-flex"><Download size={15} /></button>
+                <button onClick={exportPrintable} aria-label="Imprimer / Exporter en PDF" title="Imprimer / PDF" className="btn-ghost !p-2 !min-h-0 !rounded-full hidden sm:inline-flex"><Printer size={15} /></button>
+              </>
+            )}
+            <div className="flex-1" />
+            {loading ? (
+              <button onClick={abort} aria-label="Arrêter la génération" title="Arrêter" className="send-btn btn-primary !bg-none !bg-fuchsia-500"><Square size={14} fill="currentColor" /></button>
+            ) : (
+              <button ref={sendBtnRef} data-magnetic onClick={send} disabled={!input.trim() && attachedFiles.length === 0} aria-label="Envoyer le message" className="send-btn btn-primary"><Send size={16} /></button>
+            )}
+          </div>
         </div>
       </div>
     </div>

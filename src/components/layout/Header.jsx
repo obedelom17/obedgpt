@@ -1,30 +1,27 @@
-import { Plus, Menu, Search } from 'lucide-react'
+import { Plus, Search } from 'lucide-react'
 import { useApp } from '../../App'
+import { useScramble } from '../../hooks/useScramble'
+import { NAV_ITEMS } from './Dock'
 import ThemeToggle from '../fx/ThemeToggle'
 
 export default function Header({ mode }) {
-  const { startNewChat, setSidebarOpen, busy, openPalette } = useApp()
+  const { startNewChat, busy, openPalette, activeMode } = useApp()
+  const Icon = NAV_ITEMS.find(n => n.key === activeMode)?.icon
+  const title = useScramble(mode || '', { duration: 520 })
 
   return (
-    <header className="relative h-12 md:h-14 flex items-center gap-3 md:gap-4 px-3 md:px-5 border-b border-orange-500/15 glass-panel flex-shrink-0 z-20">
-
-      <button onClick={() => setSidebarOpen(true)} className="md:hidden btn-ghost p-2 flex-shrink-0" title="Menu" aria-label="Ouvrir le menu">
-        <Menu size={18} />
+    <header className="top-bar">
+      <button onClick={startNewChat} className="md:hidden pill-btn !px-0 w-[38px] justify-center" title="Nouveau chat" aria-label="Nouveau chat"><Plus size={17} /></button>
+      <div className={`title-pill ${busy ? 'busy' : ''}`}>
+        <span className="dotlive" />
+        {Icon && <Icon size={15} className="text-cyan-400" />}
+        <h1 className="font-display font-semibold text-[0.85rem]">{title}</h1>
+      </div>
+      <div className="flex-1" />
+      <button onClick={openPalette} className="pill-btn hidden sm:inline-flex" aria-label="Ouvrir la palette de commandes">
+        <Search size={14} /> Rechercher <kbd className="fx-kbd">Ctrl K</kbd>
       </button>
-
-      <button onClick={startNewChat} className="md:hidden btn-primary p-2 flex-shrink-0" title="Nouveau chat" aria-label="Nouveau chat">
-        <Plus size={16} />
-      </button>
-
-      <h1 key={mode} className="title-swap font-display font-semibold text-sm md:text-base text-stone-800 truncate flex-1">
-        {mode}
-      </h1>
-
-      <button onClick={openPalette} className="btn-ghost hidden sm:inline-flex items-center gap-2 text-xs py-1.5 px-3" aria-label="Ouvrir la palette de commandes">
-        <Search size={13} /> Rechercher <kbd className="fx-kbd">Ctrl K</kbd>
-      </button>
-      <button onClick={openPalette} className="btn-ghost sm:hidden p-2" aria-label="Rechercher"><Search size={16} /></button>
-
+      <button onClick={openPalette} className="pill-btn sm:hidden !px-0 w-[38px] justify-center" aria-label="Rechercher"><Search size={16} /></button>
       <ThemeToggle />
       <div className={`busy-line ${busy ? 'on' : ''}`} />
     </header>

@@ -4,10 +4,10 @@ pour l'installation sur ordinateur, iOS et Android."""
 from PIL import Image, ImageDraw
 import math
 
-OUT = "/home/claude/obedgpt/public"
+OUT = "/home/claude/obedgpt-main/public"
 
-C1 = (249, 115, 22)   # #F97316 (haut-gauche)
-C2 = (234, 88, 12)    # #EA580C (bas-droite)
+C1 = (139, 92, 246)   # #F97316 (haut-gauche)
+C2 = (34, 211, 238)    # #EA580C (bas-droite)
 
 def gradient_bg(size, supersample=4):
     s = size * supersample

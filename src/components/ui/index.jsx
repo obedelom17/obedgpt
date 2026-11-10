@@ -74,7 +74,7 @@ export function LoadingDots({ label = "ObedGPT réfléchit..." }) {
   return (
     <div className="flex items-center gap-3 py-2 px-1">
       <div className="flex gap-1">
-        {[0,1,2].map(i => <span key={i} className="loading-dot w-2 h-2 rounded-full block" style={{ background: 'linear-gradient(135deg,#f97316,#f43f5e)', boxShadow: '0 0 10px rgba(249,115,22,0.6)' }} />)}
+        {[0,1,2].map(i => <span key={i} className="loading-dot w-2 h-2 rounded-full block" style={{ background: 'var(--grad)', boxShadow: '0 0 12px rgba(34,211,238,0.7)' }} />)}
       </div>
       <span className="text-xs font-mono text-stone-400">{label}</span>
     </div>
@@ -87,7 +87,7 @@ function CopyButton({ code }) {
   return (
     <button onClick={() => { navigator.clipboard.writeText(code); setCopied(true); toast('Code copié'); setTimeout(() => setCopied(false), 2000) }}
       aria-label={copied ? 'Code copié' : 'Copier le code'}
-      className="text-stone-400 hover:text-orange-500 transition-colors">
+      className="text-stone-400 hover:text-cyan-400 transition-colors">
       {copied ? <Check size={13} /> : <Copy size={13} />}
     </button>
   )
@@ -113,7 +113,7 @@ export function MarkdownRenderer({ content }) {
                     <CopyButton code={code} />
                   </div>
                   <SyntaxHighlighter style={theme === 'dark' ? oneDark : oneLight} language={lang || 'text'} PreTag="div"
-                    customStyle={{ margin: 0, borderRadius: 0, background: theme === 'dark' ? '#1c1815' : '#FFFBF7', fontSize: '0.8rem', padding: '1rem' }}
+                    customStyle={{ margin: 0, borderRadius: 0, background: theme === 'dark' ? '#0a0919' : '#f8f7ff', fontSize: '0.8rem', padding: '1rem' }}
                     {...props}>{code}</SyntaxHighlighter>
                 </div>
               )

@@ -1,7 +1,8 @@
 import { useState, useEffect, lazy, Suspense, createContext, useContext } from 'react'
 import { ThemeProvider } from './hooks/useTheme.jsx'
 import { useChatHistory } from './hooks/useChatHistory'
-import Sidebar from './components/layout/Sidebar'
+import Dock from './components/layout/Dock'
+import HistoryPanel from './components/layout/HistoryPanel'
 import Header from './components/layout/Header'
 import ChatMode from './components/modes/ChatMode'
 import { LoadingDots } from './components/ui'
@@ -58,6 +59,20 @@ export default function App() {
 
   useGlobalFx()
 
+  // Geste mobile : glisser depuis le bord gauche ouvre l'historique.
+  useEffect(() => {
+    let sx = null, sy = 0
+    const start = e => { const t = e.touches[0]; sx = t.clientX < 24 ? t.clientX : null; sy = t.clientY }
+    const move = e => {
+      if (sx == null) return
+      const t = e.touches[0]
+      if (t.clientX - sx > 70 && Math.abs(t.clientY - sy) < 50) { setSidebarOpen(true); sx = null }
+    }
+    window.addEventListener('touchstart', start, { passive: true })
+    window.addEventListener('touchmove', move, { passive: true })
+    return () => { window.removeEventListener('touchstart', start); window.removeEventListener('touchmove', move) }
+  }, [])
+
   // Ctrl/Cmd + K : palette de commandes
   useEffect(() => {
     const onKey = e => {
@@ -110,13 +125,12 @@ export default function App() {
           <Background busy={busy} />
           <CursorGlow />
           <Splash />
-          <div className="flex app-height w-screen overflow-hidden relative z-10">
-
-            <Sidebar />
-
-            <div className="flex flex-col flex-1 min-w-0 relative z-10">
+          <div className="app-height w-screen overflow-hidden relative z-10">
+            <Dock />
+            <HistoryPanel />
+            <div className="app-shell">
               <Header mode={MODES[activeMode]?.label} />
-              <main className="flex-1 overflow-hidden">
+              <main className="flex-1 min-h-0 overflow-hidden">
                 <div key={activeMode} className="page-enter">
                   <Suspense fallback={<div className="h-full flex items-center justify-center"><LoadingDots label="Chargement..." /></div>}>
                     <ActiveComponent key={activeChatId} />

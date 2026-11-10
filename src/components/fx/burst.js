@@ -3,7 +3,7 @@
 // des particules vivantes : zéro coût au repos.
 let canvas, ctx, parts = [], raf = 0
 
-const COLORS = ['#f97316', '#fb923c', '#f43f5e', '#fbbf24', '#fde68a', '#ffffff']
+const COLORS = ['#8b5cf6', '#a78bfa', '#22d3ee', '#67e8f9', '#e879f9', '#ffffff']
 
 function ensure() {
   if (canvas) return
