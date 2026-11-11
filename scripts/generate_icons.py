@@ -1,68 +1,67 @@
-"""Génère les icônes PWA d'ObedGPT (logo éclair sur dégradé orange),
-à partir du même design que public/favicon.svg, en plusieurs résolutions
-pour l'installation sur ordinateur, iOS et Android."""
-from PIL import Image, ImageDraw
-import math
+"""Génère les icônes PWA et l'image Open Graph d'ObedGPT à partir du logo
+(monogramme « G » blanc sur carré arrondi bleu cobalt, identique à
+public/favicon.svg). Usage : python3 scripts/generate_icons.py"""
+import os
+from PIL import Image, ImageDraw, ImageFont
 
-OUT = "/home/claude/obedgpt-main/public"
+OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "public")
+BLUE = (42, 79, 214)
+SS = 4  # supersampling pour des bords nets
 
-C1 = (139, 92, 246)   # #F97316 (haut-gauche)
-C2 = (34, 211, 238)    # #EA580C (bas-droite)
 
-def gradient_bg(size, supersample=4):
-    s = size * supersample
-    img = Image.new("RGB", (s, s))
-    px = img.load()
-    for y in range(s):
-        for x in range(s):
-            t = (x + y) / (2 * s)
-            r = int(C1[0] + (C2[0] - C1[0]) * t)
-            g = int(C1[1] + (C2[1] - C1[1]) * t)
-            b = int(C1[2] + (C2[2] - C1[2]) * t)
-            px[x, y] = (r, g, b)
+def draw_mark(size, scale=1.0, bg=True, radius=0.22, square=False):
+    s = size * SS
+    img = Image.new("RGBA", (s, s), (0, 0, 0, 0))
+    d = ImageDraw.Draw(img)
+    if bg:
+        if square:
+            d.rectangle([0, 0, s, s], fill=BLUE)
+        else:
+            d.rounded_rectangle([0, 0, s - 1, s - 1], radius=int(s * radius), fill=BLUE)
+    k = s / 100 * scale
+    off = s * (1 - scale) / 2
+    def P(x, y): return (off + x * k, off + y * k)
+    cx, cy = P(50, 50)
+    r = 21 * k
+    w = max(1, int(8.5 * k))
+    ro = r + w / 2  # PIL dessine le trait vers l'intérieur de la boîte
+    d.arc([cx - ro, cy - ro, cx + ro, cy + ro], start=0, end=320, fill="white", width=w)
+    # extrémités arrondies
+    import math
+    for ang in (0, 320):
+        ex = cx + r * math.cos(math.radians(ang)); ey = cy + r * math.sin(math.radians(ang))
+        d.ellipse([ex - w / 2, ey - w / 2, ex + w / 2, ey + w / 2], fill="white")
+    x1, y1 = P(71, 50); x2, y2 = P(52, 50)
+    d.line([x1, y1, x2, y2], fill="white", width=w)
+    d.ellipse([x2 - w / 2, y2 - w / 2, x2 + w / 2, y2 + w / 2], fill="white")
     return img.resize((size, size), Image.LANCZOS)
 
-def bolt_path(size, scale=1.0, offset=(0, 0)):
-    # Reprend exactement la forme du favicon.svg (viewBox 100x100):
-    # M50 25 L65 45 L55 45 L55 75 L45 75 L45 45 L35 45 Z
-    pts = [(50, 25), (65, 45), (55, 45), (55, 75), (45, 75), (45, 45), (35, 45)]
-    ox, oy = offset
-    return [((x / 100 * size) * scale + ox, (y / 100 * size) * scale + oy) for x, y in pts]
 
-def rounded_mask(size, radius_ratio):
-    mask = Image.new("L", (size, size), 0)
-    d = ImageDraw.Draw(mask)
-    d.rounded_rectangle([0, 0, size - 1, size - 1], radius=int(size * radius_ratio), fill=255)
-    return mask
+def save(img, name):
+    img.save(os.path.join(OUT, name)); print("✓", name, img.size)
 
-def make_icon(size, rounded=True, radius_ratio=0.20, maskable=False, filename=None):
-    bg = gradient_bg(size)
-    draw = ImageDraw.Draw(bg)
-    if maskable:
-        # Zone de sécurité Android adaptive icons : contenu réduit et centré.
-        scale = 0.6
-        cx = size * (1 - scale) / 2
-        cy = size * (1 - scale) / 2
-        pts = bolt_path(size, scale=scale, offset=(cx, cy))
-    else:
-        pts = bolt_path(size)
-    draw.polygon(pts, fill=(255, 255, 255))
 
-    if rounded and not maskable:
-        mask = rounded_mask(size, radius_ratio)
-        out = Image.new("RGBA", (size, size), (0, 0, 0, 0))
-        out.paste(bg, (0, 0), mask)
-    else:
-        out = bg.convert("RGBA")
+save(draw_mark(192), "icon-192.png")
+save(draw_mark(512), "icon-512.png")
+save(draw_mark(192, scale=0.62, square=True), "icon-maskable-192.png")
+save(draw_mark(512, scale=0.62, square=True), "icon-maskable-512.png")
+save(draw_mark(180, square=True).convert("RGB"), "apple-touch-icon.png")
 
-    out.save(f"{OUT}/{filename}")
-    print("✓", filename, out.size)
-
-# Android / desktop PWA
-make_icon(192, rounded=True, radius_ratio=0.20, filename="icon-192.png")
-make_icon(512, rounded=True, radius_ratio=0.20, filename="icon-512.png")
-# Maskable (Android adaptive icons) — plein cadre, l'OS applique son masque
-make_icon(192, maskable=True, filename="icon-maskable-192.png")
-make_icon(512, maskable=True, filename="icon-maskable-512.png")
-# iOS — coins carrés (iOS applique lui-même l'arrondi), pas de transparence
-make_icon(180, rounded=False, filename="apple-touch-icon.png")
+# Image Open Graph 1200x630
+W, H = 1200, 630
+og = Image.new("RGB", (W, H), (11, 11, 14))
+d = ImageDraw.Draw(og)
+for x in range(0, W, 48):
+    d.line([x, 0, x, H], fill=(20, 20, 26))
+for y in range(0, H, 48):
+    d.line([0, y, W, y], fill=(20, 20, 26))
+mark = draw_mark(168)
+og.paste(mark, (96, 231), mark)
+def font(name, size):
+    for p in (f"/usr/share/fonts/opentype/inter/{name}.otf", "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"):
+        if os.path.exists(p): return ImageFont.truetype(p, size)
+    return ImageFont.load_default()
+d.text((300, 238), "ObedGPT", font=font("Inter-Bold", 92), fill=(237, 237, 240))
+d.text((304, 352), "Assistant IA multimodal : chat, vision, audio, code.", font=font("Inter-Regular", 30), fill=(150, 150, 165))
+d.text((304, 410), "obedgpt.vercel.app", font=font("Inter-Medium", 24), fill=(107, 140, 255))
+og.save(os.path.join(OUT, "og-image.png")); print("✓ og-image.png")

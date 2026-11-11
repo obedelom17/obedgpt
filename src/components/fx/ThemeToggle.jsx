@@ -3,16 +3,11 @@ import { useTheme } from '../../hooks/useTheme.jsx'
 
 export default function ThemeToggle() {
   const { theme, setThemePref } = useTheme()
+  const dark = theme === 'dark'
   return (
-    <button
-      onClick={e => setThemePref(theme === 'dark' ? 'light' : 'dark', { x: e.clientX, y: e.clientY })}
-      className="pill-btn theme-toggle"
-      title="Changer de thème"
-      aria-label={theme === 'dark' ? 'Passer en thème clair' : 'Passer en thème sombre'}
-      data-magnetic
-    >
-      <Sun size={16} className="sun" />
-      <Moon size={16} className="moon" />
+    <button onClick={() => setThemePref(dark ? 'light' : 'dark')} className="icon-btn theme-toggle" title={dark ? 'Thème clair' : 'Thème sombre'}
+      aria-label={dark ? 'Passer en thème clair' : 'Passer en thème sombre'}>
+      {dark ? <Sun size={17} /> : <Moon size={17} />}
     </button>
   )
 }

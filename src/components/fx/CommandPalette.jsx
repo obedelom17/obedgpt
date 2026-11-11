@@ -47,8 +47,8 @@ export default function CommandPalette({ open, onClose }) {
   return (
     <div className="palette-overlay" onMouseDown={onClose} role="dialog" aria-modal="true" aria-label="Palette de commandes">
       <div className="palette" onMouseDown={e => e.stopPropagation()} onKeyDown={onKey}>
-        <div className="flex items-center gap-3 px-4 py-3 border-b border-orange-500/15">
-          <Search size={16} className="text-orange-500 flex-shrink-0" />
+        <div className="flex items-center gap-3 px-4 py-3 palette-sep">
+          <Search size={16} className="text-stone-400 flex-shrink-0" />
           <input ref={inputRef} value={q} onChange={e => setQ(e.target.value)} placeholder="Rechercher une action, un mode, une conversation..."
             aria-label="Rechercher une commande" className="flex-1 bg-transparent outline-none text-sm text-stone-800" style={{ fontSize: 16 }} />
           <kbd className="fx-kbd hidden sm:inline">Esc</kbd>
@@ -62,7 +62,7 @@ export default function CommandPalette({ open, onClose }) {
                 <Icon size={15} className="flex-shrink-0" />
                 <span className="flex-1 truncate">{it.label}</span>
                 <span className="text-[10px] uppercase tracking-wider opacity-50">{it.hint}</span>
-                {i === sel && <CornerDownLeft size={12} className="opacity-70" />}
+                {i === sel && <CornerDownLeft size={12} className="opacity-60" />}
               </button>
             )
           })}

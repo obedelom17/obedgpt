@@ -21,7 +21,7 @@ export function ToastProvider({ children }) {
       <div className="toast-wrap" role="status" aria-live="polite">
         {toasts.map(t => (
           <div key={t.id} className={`toast ${t.out ? 'out' : ''}`}>
-            <Check size={14} className="text-orange-400" /> {t.message}
+            <Check size={14}  /> {t.message}
           </div>
         ))}
       </div>

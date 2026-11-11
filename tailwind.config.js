@@ -1,11 +1,9 @@
 /** @type {import('tailwindcss').Config} */
-// Thème NEBULA : l'ancienne palette « orange » est remappée sur du violet
-// électrique, donc toutes les classes orange-* existantes dans l'app
-// (modes Vision, Audio, Code, TTS, Paramètres) adoptent automatiquement
-// la nouvelle identité sans les réécrire une par une.
-const violet = {
-  50: '#f5f3ff', 100: '#ede9fe', 200: '#ddd6fe', 300: '#c4b5fd', 400: '#a78bfa',
-  500: '#8b5cf6', 600: '#7c3aed', 700: '#6d28d9', 800: '#5b21b6', 900: '#4c1d95',
+// Les anciennes classes orange-* du projet (modes Vision, Audio, Code, TTS,
+// Paramètres) sont remappées sur le bleu cobalt de la nouvelle identité.
+const cobalt = {
+  50: '#eef3ff', 100: '#dde7ff', 200: '#c2d3ff', 300: '#98b4ff', 400: '#6b8cff',
+  500: '#3f66ee', 600: '#2a4fd6', 700: '#2140ad', 800: '#1d3688', 900: '#1b2f6b',
 }
 export default {
   darkMode: 'class',
@@ -13,22 +11,21 @@ export default {
   theme: {
     extend: {
       colors: {
-        orange: violet,
-        navy: { 950: '#03040a', 900: '#05060d', 800: '#0b0c1a', 700: '#12122a', 600: '#1b1b3a', 500: '#26264d' },
-        nebula: { violet: '#8b5cf6', cyan: '#22d3ee', pink: '#e879f9' },
+        orange: cobalt,
+        navy: { 950: '#07070a', 900: '#0b0b0e', 800: '#111115', 700: '#17171c', 600: '#202027', 500: '#2b2b34' },
       },
       fontFamily: {
-        display: ['"Sora"', 'sans-serif'],
-        body: ['"Inter"', 'sans-serif'],
-        mono: ['"JetBrains Mono"', 'monospace'],
+        display: ['"Inter"', 'system-ui', 'sans-serif'],
+        body: ['"Inter"', 'system-ui', 'sans-serif'],
+        mono: ['"JetBrains Mono"', 'ui-monospace', 'monospace'],
       },
       animation: {
-        'fade-in':  'fadeIn 0.3s ease-out',
-        'slide-up': 'slideUp 0.5s cubic-bezier(0.16, 1, 0.3, 1)',
+        'fade-in':  'fadeIn 0.2s ease-out',
+        'slide-up': 'slideUp 0.25s cubic-bezier(0.2, 0, 0, 1)',
       },
       keyframes: {
         fadeIn:  { from: { opacity: 0 }, to: { opacity: 1 } },
-        slideUp: { from: { opacity: 0, transform: 'translateY(16px) scale(0.98)' }, to: { opacity: 1, transform: 'translateY(0) scale(1)' } },
+        slideUp: { from: { opacity: 0, transform: 'translateY(6px)' }, to: { opacity: 1, transform: 'translateY(0)' } },
       },
     },
   },

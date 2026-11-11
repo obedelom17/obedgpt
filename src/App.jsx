@@ -1,17 +1,12 @@
 import { useState, useEffect, lazy, Suspense, createContext, useContext } from 'react'
 import { ThemeProvider } from './hooks/useTheme.jsx'
 import { useChatHistory } from './hooks/useChatHistory'
-import Dock from './components/layout/Dock'
-import HistoryPanel from './components/layout/HistoryPanel'
 import Header from './components/layout/Header'
+import Sidebar from './components/layout/Sidebar'
 import ChatMode from './components/modes/ChatMode'
 import { LoadingDots } from './components/ui'
-import Background from './components/fx/Background'
-import CursorGlow from './components/fx/CursorGlow'
-import Splash from './components/fx/Splash'
 import CommandPalette from './components/fx/CommandPalette'
 import { ToastProvider } from './components/fx/Toast'
-import { useGlobalFx } from './hooks/useGlobalFx'
 
 // Chat est le mode par défaut donc chargé immédiatement. Les autres modes
 // sont chargés à la demande : sur mobile/connexion lente, ça évite de
@@ -56,22 +51,6 @@ export default function App() {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [busy, setBusy] = useState(false)
   const [paletteOpen, setPaletteOpen] = useState(false)
-
-  useGlobalFx()
-
-  // Geste mobile : glisser depuis le bord gauche ouvre l'historique.
-  useEffect(() => {
-    let sx = null, sy = 0
-    const start = e => { const t = e.touches[0]; sx = t.clientX < 24 ? t.clientX : null; sy = t.clientY }
-    const move = e => {
-      if (sx == null) return
-      const t = e.touches[0]
-      if (t.clientX - sx > 70 && Math.abs(t.clientY - sy) < 50) { setSidebarOpen(true); sx = null }
-    }
-    window.addEventListener('touchstart', start, { passive: true })
-    window.addEventListener('touchmove', move, { passive: true })
-    return () => { window.removeEventListener('touchstart', start); window.removeEventListener('touchmove', move) }
-  }, [])
 
   // Ctrl/Cmd + K : palette de commandes
   useEffect(() => {
@@ -122,13 +101,9 @@ export default function App() {
     <ThemeProvider>
       <ToastProvider>
         <AppContext.Provider value={contextValue}>
-          <Background busy={busy} />
-          <CursorGlow />
-          <Splash />
-          <div className="app-height w-screen overflow-hidden relative z-10">
-            <Dock />
-            <HistoryPanel />
-            <div className="app-shell">
+          <div className="shell app-height">
+            <Sidebar />
+            <div className="flex flex-col flex-1 min-w-0">
               <Header mode={MODES[activeMode]?.label} />
               <main className="flex-1 min-h-0 overflow-hidden">
                 <div key={activeMode} className="page-enter">
