@@ -1,7 +1,7 @@
 {
-  "name": "ObedGPT — IA Multi-Modal",
+  "name": "ObedGPT — Assistant IA",
   "short_name": "ObedGPT",
-  "description": "Chat, Vision, Audio, Code et Text-to-Speech. IA multi-modale gratuite.",
+  "description": "Assistant IA propulsé par Groq : chat, code et synthèse vocale.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
@@ -39,17 +39,22 @@
     {
       "name": "Nouveau chat",
       "url": "/?mode=chat",
-      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
-    },
-    {
-      "name": "Vision",
-      "url": "/?mode=vision",
-      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+      "icons": [
+        {
+          "src": "/icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
     },
     {
       "name": "Code",
       "url": "/?mode=code",
-      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+      "icons": [
+        {
+          "src": "/icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
     }
   ]
 }

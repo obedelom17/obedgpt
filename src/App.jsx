@@ -1,27 +1,25 @@
-import { useState, useEffect, lazy, Suspense, createContext, useContext } from 'react'
+import { useState, useEffect, useCallback, lazy, Suspense, createContext, useContext } from 'react'
 import { ThemeProvider } from './hooks/useTheme.jsx'
 import { useChatHistory } from './hooks/useChatHistory'
 import Header from './components/layout/Header'
 import Sidebar from './components/layout/Sidebar'
 import ChatMode from './components/modes/ChatMode'
 import { LoadingDots } from './components/ui'
+import { MotionConfig, AnimatePresence, motion } from 'framer-motion'
+import Ambient from './components/fx/Ambient'
 import CommandPalette from './components/fx/CommandPalette'
 import { ToastProvider } from './components/fx/Toast'
 
 // Chat est le mode par défaut donc chargé immédiatement. Les autres modes
 // sont chargés à la demande : sur mobile/connexion lente, ça évite de
-// télécharger tout le JS (vision, audio, code, tts, settings) d'un coup
+// télécharger tout le JS (code, tts, settings) d'un coup
 // alors qu'on n'utilisera peut-être que le chat.
-const VisionMode = lazy(() => import('./components/modes/VisionMode'))
-const AudioMode  = lazy(() => import('./components/modes/AudioMode'))
 const CodeMode   = lazy(() => import('./components/modes/CodeMode'))
 const TTSMode    = lazy(() => import('./components/modes/TTSMode'))
 const Settings   = lazy(() => import('./components/Settings'))
 
 const MODES = {
   chat:     { label: 'Chat',            component: ChatMode },
-  vision:   { label: 'Vision',          component: VisionMode },
-  audio:    { label: 'Audio',           component: AudioMode },
   code:     { label: 'Code',            component: CodeMode },
   tts:      { label: 'Text-to-Speech',  component: TTSMode },
   settings: { label: 'Paramètres',      component: Settings },
@@ -36,7 +34,7 @@ export function useApp() {
 }
 
 export default function App() {
-  // Les raccourcis PWA (manifest.json) pointent vers /?mode=vision etc. :
+  // Les raccourcis PWA (manifest.json) pointent vers /?mode=code etc. :
   // on lit ce paramètre au démarrage pour ouvrir directement le bon mode.
   const initialMode = (() => {
     const m = new URLSearchParams(window.location.search).get('mode')
@@ -49,6 +47,11 @@ export default function App() {
   const [activeChatId, setActiveChatId] = useState(() => historyManager.createNewId())
   const [tempMode, setTempMode] = useState(false)
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => localStorage.getItem('obedgpt-sidebar-collapsed') === '1')
+  const toggleSidebar = useCallback(() => {
+    if (window.innerWidth < 768) setSidebarOpen(o => !o)
+    else setSidebarCollapsed(c => { localStorage.setItem('obedgpt-sidebar-collapsed', c ? '0' : '1'); return !c })
+  }, [])
   const [busy, setBusy] = useState(false)
   const [paletteOpen, setPaletteOpen] = useState(false)
 
@@ -56,10 +59,11 @@ export default function App() {
   useEffect(() => {
     const onKey = e => {
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); setPaletteOpen(o => !o) }
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'b') { e.preventDefault(); toggleSidebar() }
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [])
+  }, [toggleSidebar])
 
   const handleModeChange = (mode) => {
     setActiveMode(mode)
@@ -88,6 +92,7 @@ export default function App() {
     tempMode, setTempMode,
     sidebarOpen, setSidebarOpen,
     busy, setBusy, openPalette: () => setPaletteOpen(true),
+    sidebarCollapsed, toggleSidebar,
     history: historyManager.history,
     saveConversation: historyManager.saveConversation,
     deleteConversation: historyManager.deleteConversation,
@@ -101,20 +106,26 @@ export default function App() {
     <ThemeProvider>
       <ToastProvider>
         <AppContext.Provider value={contextValue}>
-          <div className="shell app-height">
+         <MotionConfig reducedMotion="user">
+          <Ambient busy={busy} />
+          <div className="shell">
             <Sidebar />
-            <div className="flex flex-col flex-1 min-w-0">
+            <div className="flex flex-col flex-1 min-w-0 min-h-0">
               <Header mode={MODES[activeMode]?.label} />
-              <main className="flex-1 min-h-0 overflow-hidden">
-                <div key={activeMode} className="page-enter">
-                  <Suspense fallback={<div className="h-full flex items-center justify-center"><LoadingDots label="Chargement..." /></div>}>
-                    <ActiveComponent key={activeChatId} />
-                  </Suspense>
-                </div>
+              <main className="flex-1 min-h-0 overflow-hidden relative">
+                <AnimatePresence mode="wait" initial={false}>
+                  <motion.div key={activeMode} className={`h-full ${activeMode !== 'chat' ? 'page-stagger' : ''}`}
+                    initial={{ opacity: 0, y: 14, filter: 'blur(6px)' }} animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }} exit={{ opacity: 0, y: -8, filter: 'blur(4px)' }} transition={{ duration: 0.2, ease: [0.2, 0, 0, 1] }}>
+                    <Suspense fallback={<div className="h-full flex items-center justify-center"><LoadingDots label="Chargement..." /></div>}>
+                      <ActiveComponent key={activeChatId} />
+                    </Suspense>
+                  </motion.div>
+                </AnimatePresence>
               </main>
             </div>
           </div>
           <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} />
+         </MotionConfig>
         </AppContext.Provider>
       </ToastProvider>
     </ThemeProvider>

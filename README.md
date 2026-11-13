@@ -1,60 +1,52 @@
-# ObedGPT v2.0
+# ObedGPT
 
-Interface IA multi-modale propulsée par SmartRouter (Groq + Gemini).
+Assistant IA propulsé uniquement par **Groq**, avec rotation automatique de clés.
 
-##  Fonctionnalités
+## Fonctionnalités
 
-- **Chat** avec historique, documents (PDF, TXT, CSV, JSON, DOC, DOCX), mode temporaire
-- **Vision** — analyse d'images
-- **Audio** — transcription
-- **Code** — génération multi-langage
-- **Text-to-Speech** — synthèse vocale
-- **Thème clair/sombre**
-- **SmartRouter** — rotation Groq + fallback Gemini automatique
+- **Chat** en streaming avec historique (épinglage, renommage, recherche), mode temporaire, dictée vocale, export Markdown/PDF
+- **Code** : génération et explication de code multi-langage
+- **Text-to-Speech** : synthèse vocale
+- **Thème clair/sombre**, palette de commandes (`Ctrl/Cmd + K`), barre latérale repliable (`Ctrl/Cmd + B`)
+- **SmartRouter** : rotation entre plusieurs clés Groq
 
-##  Installation
+## Installation
 
 ```bash
 npm install
 ```
 
-##  Configuration
+## Configuration
 
-Copie `.env.example` en `.env.local` et remplis tes clés :
+Copie `.env.example` en `.env.local` et renseigne tes clés Groq :
 
 ```env
-GROQ_API_KEYS=gsk_xxx,gsk_yyy    # 2-3 clés séparées par virgule
-GEMINI_API_KEY=AIza...            # Clé fallback
+GROQ_API_KEYS=gsk_xxx,gsk_yyy    # 1 à 3 clés séparées par des virgules
+# GROQ_MODEL=openai/gpt-oss-120b  # optionnel
 ```
 
-##  Développement
+## Développement
 
 ```bash
 npm run dev
 ```
 
-##  Déploiement
+## Déploiement
 
 ```bash
 vercel --prod
 ```
 
-##  Variables Vercel
-
-Dans Vercel Dashboard → Settings → Environment Variables :
+Variables à définir dans Vercel (Settings → Environment Variables) :
 
 | Variable | Description |
 |----------|-------------|
-| `GROQ_API_KEYS` | 2-3 clés Groq séparées par des virgules |
-| `GEMINI_API_KEY` | Clé Google AI Studio (fallback) |
+| `GROQ_API_KEYS` | Une ou plusieurs clés Groq, séparées par des virgules |
+| `GROQ_MODEL` | (optionnel) Modèle Groq utilisé, par défaut `openai/gpt-oss-120b` |
 
-##  SmartRouter
+## SmartRouter
 
-Le backend utilise un router intelligent :
-1. **Rate limit** — 5 req/min par IP
-2. **Cache** — 5 minutes pour les requêtes identiques
-3. **Rotation Groq** — bascule entre 2-3 clés automatiquement
-4. **Fallback Gemini** — si toutes les clés Groq sont en quota
-
----
-
+1. **Rate limit** : 10 requêtes/minute par IP
+2. **Cache** : 3 minutes pour les requêtes identiques
+3. **Rotation Groq** : bascule automatique vers la clé suivante quand le quota d'une clé est atteint
+4. **Budget de tokens** : historique et réponses plafonnés pour économiser les quotas gratuits

@@ -6,7 +6,7 @@ import rehypeRaw from 'rehype-raw'
 import rehypeKatex from 'rehype-katex'
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
 import { oneLight, oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism'
-import { Copy, Check, Upload, X, File, AlertTriangle, Clock, WifiOff, KeyRound, FileX, Cpu } from 'lucide-react'
+import { Copy, Check, X, AlertTriangle, Clock, WifiOff, KeyRound, FileX, Cpu } from 'lucide-react'
 import { useTheme } from '../../hooks/useTheme.jsx'
 import { useToast } from '../fx/Toast'
 
@@ -15,7 +15,7 @@ export function classifyError(input) {
   if (typeof input === 'object' && input.type) return input
   const msg = String(input)
 
-  if (msg.includes('429') || msg.includes('Too Many Requests') || msg.includes('RESOURCE_EXHAUSTED')) {
+  if (msg.includes('429') || msg.includes('Too Many Requests') || msg.includes('RATE_LIMIT')) {
     const match = msg.match(/retry in (\d+\.?\d*)s/i)
     return { type: '429', delay: match ? Math.ceil(parseFloat(match[1])) : 30 }
   }
@@ -43,14 +43,14 @@ export function classifyError(input) {
 const ERROR_CONFIG = {
   '429':    { icon: Clock,         color: 'amber',  title: 'Quota par minute dépassé',              body: 'Patiente quelques secondes puis réessaie automatiquement.', retryable: true },
   '503':    { icon: WifiOff,       color: 'orange', title: 'Service momentanément surchargé',    body: "Forte demande en ce moment. Réessaie automatique dans quelques secondes.", retryable: true },
-  'auth':   { icon: KeyRound,      color: 'red',    title: 'Clé API invalide',                   body: 'Vérifie la configuration des clés API dans Vercel → Settings → Environment Variables.', retryable: false },
-  '413':    { icon: FileX,         color: 'red',    title: 'Fichier trop volumineux',            body: "Limite : ~25MB pour l'audio, ~10MB pour les images. Réduis la taille.", retryable: false },
+  'auth':   { icon: KeyRound,      color: 'red',    title: 'Clé API Groq invalide',                   body: 'Vérifie GROQ_API_KEYS dans Vercel → Settings → Environment Variables.', retryable: false },
+  '413':    { icon: FileX,         color: 'red',    title: 'Message trop volumineux',            body: 'Réduis la taille du message ou du texte envoyé.', retryable: false },
   'quota':  { icon: AlertTriangle, color: 'red',    title: 'Quota journalier atteint',           body: 'Limite gratuite atteinte. Réessaie demain.', retryable: false },
   'context':{ icon: Cpu,           color: 'amber',  title: 'Conversation trop longue',           body: 'Fenêtre de contexte dépassée. Commence une nouvelle conversation.', retryable: false },
   'network':{ icon: WifiOff,       color: 'red',    title: 'Erreur réseau',                      body: 'Vérifie ta connexion internet et réessaie.', retryable: true },
   '500':    { icon: AlertTriangle, color: 'red',    title: 'Erreur serveur interne',             body: 'Problème côté serveur. Réessaie dans quelques secondes.', retryable: true },
-  '400':    { icon: AlertTriangle, color: 'red',    title: 'Requête invalide',                   body: 'Le fichier ou le format est incorrect. Essaie un autre fichier.', retryable: false },
-  'format': { icon: FileX,         color: 'red',    title: 'Format non supporté',                body: "Ce format de fichier n'est pas accepté. Essaie JPG, PNG, MP3, WAV.", retryable: false },
+  '400':    { icon: AlertTriangle, color: 'red',    title: 'Requête invalide',                   body: 'La requête est incorrecte. Reformule ou raccourcis ton message.', retryable: false },
+  'format': { icon: FileX,         color: 'red',    title: 'Format non supporté',                body: "Ce format n'est pas accepté.", retryable: false },
   'generic':{ icon: AlertTriangle, color: 'red',    title: 'Erreur inattendue',                  body: null, retryable: false },
 }
 
@@ -62,10 +62,11 @@ const COLOR_CLASSES = {
 
 export function ThinkingSkeleton() {
   return (
-    <div className="py-1 space-y-2 min-w-[180px] sm:min-w-[260px]" aria-label="ObedGPT réfléchit">
-      <div className="skeleton-line" style={{ width: '90%' }} />
-      <div className="skeleton-line" style={{ width: '72%', animationDelay: '.15s' }} />
-      <div className="skeleton-line" style={{ width: '55%', animationDelay: '.3s' }} />
+    <div className="py-1 space-y-2.5 min-w-[200px] sm:min-w-[320px]" aria-label="ObedGPT réfléchit">
+      <div className="text-sm font-medium shimmer-text w-fit">Réflexion en cours…</div>
+      <div className="skeleton-line" style={{ width: '92%' }} />
+      <div className="skeleton-line" style={{ width: '74%', animationDelay: '.15s' }} />
+      <div className="skeleton-line" style={{ width: '52%', animationDelay: '.3s' }} />
     </div>
   )
 }
@@ -176,51 +177,6 @@ export function ErrorBanner({ error, onDismiss, onRetry }) {
       <button onClick={onDismiss} aria-label="Fermer ce message" className="flex-shrink-0 text-stone-400 hover:text-stone-600 transition-colors mt-0.5">
         <X size={14} />
       </button>
-    </div>
-  )
-}
-
-export function FileUploadZone({ onFile, accept, label, hint, maxSizeMB = 10, currentFile }) {
-  const [dragging, setDragging] = useState(false)
-  const [err, setErr] = useState(null)
-
-  const handleFile = useCallback((file) => {
-    setErr(null)
-    if (!file) return
-    if (file.size / 1024 / 1024 > maxSizeMB) { setErr(`Fichier trop grand (max ${maxSizeMB}MB)`); return }
-    const reader = new FileReader()
-    reader.onload = e => onFile({ file, base64: e.target.result.split(',')[1], mimeType: file.type, name: file.name })
-    reader.onerror = () => setErr('Impossible de lire ce fichier.')
-    reader.readAsDataURL(file)
-  }, [onFile, maxSizeMB])
-
-  const onDrop = useCallback(e => { e.preventDefault(); setDragging(false); const f = e.dataTransfer.files[0]; if (f) handleFile(f) }, [handleFile])
-
-  return (
-    <div>
-      {currentFile ? (
-        <div className="flex items-center gap-3 p-3 card rounded-xl">
-          <div className="w-9 h-9 rounded-lg bg-orange-50 flex items-center justify-center flex-shrink-0">
-            <File size={16} className="text-orange-500" />
-          </div>
-          <div className="flex-1 min-w-0">
-            <div className="text-sm text-stone-800 truncate font-medium">{currentFile.name}</div>
-            <div className="text-xs text-stone-400 mt-0.5">{(currentFile.file.size / 1024).toFixed(0)} KB · {currentFile.mimeType}</div>
-          </div>
-          <button onClick={() => onFile(null)} aria-label="Retirer le fichier" className="text-stone-400 hover:text-red-400 transition-colors"><X size={16} /></button>
-        </div>
-      ) : (
-        <label onDragOver={e => { e.preventDefault(); setDragging(true) }} onDragLeave={() => setDragging(false)} onDrop={onDrop}
-          className={`drop-zone flex flex-col items-center justify-center gap-2 p-8 cursor-pointer ${dragging ? 'drag-over' : ''}`}>
-          <div className="w-12 h-12 rounded-2xl bg-orange-50 flex items-center justify-center">
-            <Upload size={20} className="text-orange-400" />
-          </div>
-          <div className="text-sm font-medium text-stone-600">{label || 'Déposer un fichier'}</div>
-          <div className="text-xs text-stone-400 text-center">{hint || `Max ${maxSizeMB}MB`}</div>
-          <input type="file" accept={accept} onChange={e => { const f = e.target.files?.[0]; if (f) handleFile(f) }} className="hidden" />
-        </label>
-      )}
-      {err && <p className="text-xs text-red-500 mt-2 px-1">{err}</p>}
     </div>
   )
 }

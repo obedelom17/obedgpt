@@ -2,7 +2,7 @@
 // vercel.json appliquait auparavant `Access-Control-Allow-Origin: *` sur
 // toutes les routes /api/*. N'importe quel autre site pouvait donc appeler
 // ces endpoints depuis le navigateur d'un visiteur et consommer le quota de
-// tokens partagé (Groq/Gemini) sans jamais passer par obedgpt.vercel.app.
+// tokens partagé Groq sans jamais passer par obedgpt.vercel.app.
 // On restreint maintenant l'origine à l'app elle-même + ses previews Vercel.
 
 const ALLOWED_ORIGINS = [

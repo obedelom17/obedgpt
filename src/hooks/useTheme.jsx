@@ -40,12 +40,29 @@ export function ThemeProvider({ children }) {
     document.documentElement.style.fontSize = FONT_SIZES[fontSize] || FONT_SIZES.md
   }, [fontSize])
 
-  const setThemePref = useCallback((pref) => {
-    localStorage.setItem(THEME_KEY, pref)
-    const isDark = pref === 'auto' ? window.matchMedia('(prefers-color-scheme: dark)').matches : pref === 'dark'
-    document.documentElement.classList.toggle('dark', isDark)
-    setTheme(isDark ? 'dark' : 'light')
-    setThemePrefState(pref)
+  // `origin` {x, y} (optionnel) : point de départ de la révélation circulaire
+  // (View Transitions API). Sans support ou avec « réduire les animations »,
+  // la bascule est simplement instantanée.
+  const setThemePref = useCallback((pref, origin) => {
+    const commit = () => {
+      localStorage.setItem(THEME_KEY, pref)
+      const isDark = pref === 'auto' ? window.matchMedia('(prefers-color-scheme: dark)').matches : pref === 'dark'
+      document.documentElement.classList.toggle('dark', isDark)
+      setTheme(isDark ? 'dark' : 'light')
+      setThemePrefState(pref)
+    }
+    const reduce = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+    if (!document.startViewTransition || reduce) { commit(); return }
+    const x = origin?.x ?? window.innerWidth / 2
+    const y = origin?.y ?? window.innerHeight / 2
+    const radius = Math.hypot(Math.max(x, window.innerWidth - x), Math.max(y, window.innerHeight - y))
+    const t = document.startViewTransition(commit)
+    t.ready.then(() => {
+      document.documentElement.animate(
+        { clipPath: [`circle(0px at ${x}px ${y}px)`, `circle(${radius}px at ${x}px ${y}px)`] },
+        { duration: 700, easing: 'cubic-bezier(0.22, 1, 0.36, 1)', pseudoElement: '::view-transition-new(root)' }
+      )
+    }).catch(() => {})
   }, [])
 
   const setFontSize = useCallback((size) => {

@@ -5,7 +5,7 @@
 //  - fichiers statiques (JS/CSS/images, hashés par Vite donc immuables) :
 //    cache d'abord, mis à jour silencieusement en arrière-plan
 
-const CACHE_NAME = 'obedgpt-shell-v4'
+const CACHE_NAME = 'obedgpt-shell-v5'
 
 self.addEventListener('install', () => {
   self.skipWaiting()
