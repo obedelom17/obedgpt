@@ -1,13 +1,15 @@
 # ObedGPT
 
-Assistant IA propulsé uniquement par **Groq**, avec rotation automatique de clés.
+Assistant IA propulsé uniquement par **Groq**, avec rotation automatique de clés. Aucune autre API (Gemini, etc.) n'est utilisée ni configurable.
 
 ## Fonctionnalités
 
-- **Chat** en streaming avec historique (épinglage, renommage, recherche), mode temporaire, dictée vocale, export Markdown/PDF
-- **Code** : génération et explication de code multi-langage
-- **Text-to-Speech** : synthèse vocale
-- **Thème clair/sombre**, palette de commandes (`Ctrl/Cmd + K`), barre latérale repliable (`Ctrl/Cmd + B`)
+- **Chat** en streaming : historique (épinglage, renommage en ligne, recherche), mode temporaire, dictée vocale, lecture à voix haute des réponses, durée de génération, export Markdown/PDF
+- **Commandes rapides** : tape `/` dans le champ de saisie (`/resume`, `/traduire`, `/expliquer`, `/corriger`, `/code`, `/plan`)
+- **Code** : génération et explication de code multi-langage, aperçu HTML, copie et téléchargement
+- **Text-to-Speech** : synthèse vocale navigateur avec surlignage mot par mot
+- **Apparence** : thème clair/sombre/auto, 4 couleurs d'accent, taille du texte
+- **Palette de commandes** (`Ctrl/Cmd + K`), barre latérale repliable (`Ctrl/Cmd + B`), application installable (PWA)
 - **SmartRouter** : rotation entre plusieurs clés Groq
 
 ## Installation
@@ -50,3 +52,9 @@ Variables à définir dans Vercel (Settings → Environment Variables) :
 2. **Cache** : 3 minutes pour les requêtes identiques
 3. **Rotation Groq** : bascule automatique vers la clé suivante quand le quota d'une clé est atteint
 4. **Budget de tokens** : historique et réponses plafonnés pour économiser les quotas gratuits
+
+## Identité visuelle
+
+- Logo : bulle de dialogue en « O » avec un point jaune (`src/components/Logo.jsx`, `public/favicon.svg`). Les icônes PWA se régénèrent avec `python3 scripts/generate_icons.py`.
+- Polices : Bricolage Grotesque (titres), Instrument Sans (texte), JetBrains Mono (code).
+- Les couleurs vivent dans `src/index.css` (variables CSS) : vert `#0e7a5c` et jaune `#f2b008` par défaut.

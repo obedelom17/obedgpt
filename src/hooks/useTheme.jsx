@@ -3,21 +3,34 @@ import { createContext, useContext, useEffect, useState, useCallback } from 'rea
 const ThemeContext = createContext(null)
 const THEME_KEY = 'obedgpt-theme-pref'   // 'auto' | 'light' | 'dark'
 const FONT_KEY  = 'obedgpt-font-size'    // 'sm' | 'md' | 'lg'
+const ACCENT_KEY = 'obedgpt-accent'      // 'vert' | 'cobalt' | 'ambre' | 'rose'
 
 const FONT_SIZES = { sm: '15px', md: '16px', lg: '18px' }
+export const ACCENTS = [
+  { id: 'vert',   label: 'Vert',   swatch: '#0e7a5c' },
+  { id: 'cobalt', label: 'Cobalt', swatch: '#2f55d4' },
+  { id: 'ambre',  label: 'Ambre',  swatch: '#b25a05' },
+  { id: 'rose',   label: 'Rose',   swatch: '#c2255c' },
+]
 
 function getSystemTheme() {
   if (typeof window === 'undefined' || !window.matchMedia) return 'light'
   return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
 }
 
-// Détecte le thème du système (clair/sombre) ET garde la possibilité pour
-// l'utilisateur de forcer un thème dans Paramètres ('auto' suit l'OS comme
-// avant, 'light'/'dark' l'imposent quel que soit le thème du système).
+function applyAccent(id) {
+  const root = document.documentElement
+  if (!id || id === 'vert') root.removeAttribute('data-accent')
+  else root.setAttribute('data-accent', id)
+}
+
+// Thème (auto / clair / sombre), taille du texte et couleur d'accent.
+// 'auto' suit le système ; les deux autres l'imposent.
 export function ThemeProvider({ children }) {
   const [themePref, setThemePrefState] = useState(() => localStorage.getItem(THEME_KEY) || 'auto')
   const [theme, setTheme] = useState(getSystemTheme)
   const [fontSize, setFontSizeState] = useState(() => localStorage.getItem(FONT_KEY) || 'md')
+  const [accent, setAccentState] = useState(() => localStorage.getItem(ACCENT_KEY) || 'vert')
 
   useEffect(() => {
     const mql = window.matchMedia('(prefers-color-scheme: dark)')
@@ -36,13 +49,12 @@ export function ThemeProvider({ children }) {
     }
   }, [themePref])
 
-  useEffect(() => {
-    document.documentElement.style.fontSize = FONT_SIZES[fontSize] || FONT_SIZES.md
-  }, [fontSize])
+  useEffect(() => { document.documentElement.style.fontSize = FONT_SIZES[fontSize] || FONT_SIZES.md }, [fontSize])
+  useEffect(() => { applyAccent(accent) }, [accent])
 
-  // `origin` {x, y} (optionnel) : point de départ de la révélation circulaire
+  // `origin` {x, y} : point de départ de la révélation circulaire
   // (View Transitions API). Sans support ou avec « réduire les animations »,
-  // la bascule est simplement instantanée.
+  // la bascule est instantanée.
   const setThemePref = useCallback((pref, origin) => {
     const commit = () => {
       localStorage.setItem(THEME_KEY, pref)
@@ -65,13 +77,11 @@ export function ThemeProvider({ children }) {
     }).catch(() => {})
   }, [])
 
-  const setFontSize = useCallback((size) => {
-    localStorage.setItem(FONT_KEY, size)
-    setFontSizeState(size)
-  }, [])
+  const setFontSize = useCallback((size) => { localStorage.setItem(FONT_KEY, size); setFontSizeState(size) }, [])
+  const setAccent = useCallback((id) => { localStorage.setItem(ACCENT_KEY, id); setAccentState(id) }, [])
 
   return (
-    <ThemeContext.Provider value={{ theme, themePref, setThemePref, fontSize, setFontSize }}>
+    <ThemeContext.Provider value={{ theme, themePref, setThemePref, fontSize, setFontSize, accent, setAccent }}>
       {children}
     </ThemeContext.Provider>
   )

@@ -1,7 +1,6 @@
-import { useState, useRef, useEffect } from 'react'
-import { Send, RotateCcw, Mic, RefreshCw, Square, Pencil, Check, Download, Printer, ArrowDown, Copy, Lightbulb, BookOpen, Code2, Sparkles } from 'lucide-react'
+import { useState, useRef, useEffect, useMemo } from 'react'
+import { Send, RotateCcw, Mic, RefreshCw, Square, Pencil, Check, Download, Printer, ArrowDown, ArrowRight, Copy, Lightbulb, BookOpen, Code2, Sparkles, Volume2, X, Slash } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
-import SpotlightCard from '../fx/SpotlightCard'
 import Logo from '../Logo'
 import { MarkdownRenderer, ErrorBanner, ThinkingSkeleton } from '../ui'
 import { useToast } from '../fx/Toast'
@@ -11,22 +10,8 @@ import { useApp } from '../../App'
 const BASE_SYSTEM_PROMPT = "Tu es ObedGPT, un assistant IA intelligent créé par Obed Elom AGBEBAVI. Si on te demande qui t'a créé/développé, réponds que c'est Obed Elom AGBEBAVI. Réponds dans la langue de l'utilisateur. Utilise LaTeX pour les maths : $...$ inline, $$...$$ pour les blocs."
 const PERSONA_KEY = 'obedgpt-persona'
 const PLACEHOLDERS = ['Expliquez-moi la récursivité avec un exemple...', 'Écris une fonction Python qui trie une liste...', 'Résous cette équation : 2x² − 5x + 2 = 0', 'Aide-moi à préparer un exposé sur le climat...', 'Traduis ce paragraphe en anglais...']
-const HEADING = ['Comment', 'puis-je', 'vous', 'aider', '?']
 const spring = { type: 'spring', stiffness: 380, damping: 30 }
-
-function RotatingPlaceholder({ hidden }) {
-  const [i, setI] = useState(0)
-  useEffect(() => { const t = setInterval(() => setI(n => (n + 1) % PLACEHOLDERS.length), 3400); return () => clearInterval(t) }, [])
-  return (
-    <AnimatePresence mode="wait">
-      {!hidden && (
-        <motion.span key={i} className="ph" initial={{ opacity: 0, y: 8, filter: 'blur(3px)' }} animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }} exit={{ opacity: 0, y: -8, filter: 'blur(3px)' }} transition={{ duration: 0.28 }}>
-          {PLACEHOLDERS[i]}
-        </motion.span>
-      )}
-    </AnimatePresence>
-  )
-}
+const easeOut = [0.2, 0, 0, 1]
 
 const SUGGESTIONS = [
   { text: 'Devine les questions du prof', icon: Lightbulb, sub: 'Préparer un examen' },
@@ -35,17 +20,50 @@ const SUGGESTIONS = [
   { text: 'Traite moi ça', icon: Sparkles, sub: 'Analyser et résumer' },
 ]
 
+// Commandes rapides : tape « / » au début du message pour insérer un modèle.
+const SLASH = [
+  { cmd: '/resume',    hint: 'Résumer un texte en points clés',           tpl: 'Résume ce texte en 5 points clés :\n\n' },
+  { cmd: '/traduire',  hint: 'Traduire vers l\'anglais',                  tpl: 'Traduis en anglais le texte suivant :\n\n' },
+  { cmd: '/expliquer', hint: 'Expliquer simplement, avec un exemple',      tpl: 'Explique simplement, avec un exemple concret :\n\n' },
+  { cmd: '/corriger',  hint: 'Corriger orthographe et grammaire',          tpl: 'Corrige l\'orthographe et la grammaire sans changer le sens :\n\n' },
+  { cmd: '/code',      hint: 'Écrire un programme complet',                tpl: 'Écris le code complet pour : ' },
+  { cmd: '/plan',      hint: 'Construire un plan détaillé',                tpl: 'Prépare un plan détaillé pour : ' },
+]
 
 // On n'envoie jamais TOUT l'historique au modèle : au-delà d'un certain
-// nombre de messages, le coût en tokens d'un seul tour de chat exploserait
-// (chaque message renvoie tout ce qui précède). Le serveur applique de
-// toute façon la même limite en garde-fou, mais la tronquer ici évite aussi
-// d'envoyer une requête plus lourde que nécessaire sur le réseau.
+// nombre de messages, le coût en tokens d'un tour exploserait. Le serveur
+// applique la même limite en garde-fou.
 const MAX_CONTEXT_MESSAGES = 16
 
+function greeting() {
+  const h = new Date().getHours()
+  if (h < 5) return 'Bonne nuit.'
+  if (h < 12) return 'Bonjour.'
+  if (h < 18) return 'Bon après-midi.'
+  return 'Bonsoir.'
+}
 
 function escapeHtml(str) {
   return str.replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]))
+}
+
+// Texte « lisible » pour la synthèse vocale : on retire blocs de code et symboles Markdown.
+function toSpeakable(md) {
+  return md.replace(/```[\s\S]*?```/g, ' (extrait de code) ').replace(/[`*_#>|~]/g, '').replace(/\[([^\]]+)\]\([^)]+\)/g, '$1').replace(/\s+/g, ' ').trim()
+}
+
+function RotatingPlaceholder({ hidden }) {
+  const [i, setI] = useState(0)
+  useEffect(() => { const t = setInterval(() => setI(n => (n + 1) % PLACEHOLDERS.length), 3600); return () => clearInterval(t) }, [])
+  return (
+    <AnimatePresence mode="wait">
+      {!hidden && (
+        <motion.span key={i} className="ph" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.26 }}>
+          {PLACEHOLDERS[i]}
+        </motion.span>
+      )}
+    </AnimatePresence>
+  )
 }
 
 export default function ChatMode() {
@@ -53,8 +71,8 @@ export default function ChatMode() {
   const toast = useToast()
   const savedConv = activeChatId ? history.find(c => c.id === activeChatId) : null
 
-  const [messages, setMessages]     = useState(() => savedConv?.messages || [])
-  const [input, setInput]           = useState('')
+  const [messages, setMessages] = useState(() => savedConv?.messages || [])
+  const [input, setInput] = useState('')
   const [systemPrompt] = useState(() => {
     const persona = localStorage.getItem(PERSONA_KEY)
     return persona ? `${BASE_SYSTEM_PROMPT}\n\nInstructions supplémentaires de l'utilisateur : ${persona}` : BASE_SYSTEM_PROMPT
@@ -63,11 +81,22 @@ export default function ChatMode() {
   const [listening, setListening] = useState(false)
   const [editingIndex, setEditingIndex] = useState(null)
   const [editValue, setEditValue] = useState('')
+  const [speakingIdx, setSpeakingIdx] = useState(null)
+  const [slashIdx, setSlashIdx] = useState(0)
   const { loading, error, call, retry, clearError, abort } = useStreamingChat()
-  const bottomRef  = useRef(null)
+  const bottomRef = useRef(null)
   const recognitionRef = useRef(null)
+  const inputRef = useRef(null)
+  const heroGreeting = useMemo(greeting, [])
 
-  // Auto-save non-temp conversations
+  // Menu des commandes « / »
+  const slashMatches = useMemo(() => {
+    if (!/^\/[a-zé]*$/i.test(input)) return []
+    return SLASH.filter(s => s.cmd.startsWith(input.toLowerCase()))
+  }, [input])
+  useEffect(() => { setSlashIdx(0) }, [input])
+
+  // Auto-save des conversations non temporaires
   useEffect(() => {
     if (!tempMode && activeChatId && messages.length > 0) {
       const title = messages[0].content.slice(0, 50) || 'Nouvelle conversation'
@@ -75,11 +104,18 @@ export default function ChatMode() {
     }
   }, [messages, activeChatId, tempMode, saveConversation])
 
-  // Fait pulser le fond et le header pendant la génération
   useEffect(() => { setBusy(loading); return () => setBusy(false) }, [loading, setBusy])
 
+  // Hauteur du champ de saisie (aussi après insertion d'un modèle)
+  useEffect(() => {
+    const el = inputRef.current
+    if (!el) return
+    el.style.height = 'auto'
+    el.style.height = Math.min(el.scrollHeight, 170) + 'px'
+  }, [input])
+
   // Défilement intelligent : on suit le texte seulement si l'utilisateur est
-  // déjà en bas (sinon il lit plus haut), avec un bouton pour redescendre.
+  // déjà en bas, avec un bouton pour redescendre.
   const scrollRef = useRef(null)
   const stickRef = useRef(true)
   const [showFab, setShowFab] = useState(false)
@@ -99,21 +135,14 @@ export default function ChatMode() {
   }, [messages, loading])
 
   const copyMessage = (text) => { navigator.clipboard?.writeText(text); toast('Réponse copiée') }
-  const sendBtnRef = useRef(null)
-  const inputRef = useRef(null)
 
-  // Coupe proprement la dictée vocale si le composant est démonté en plein
-  // enregistrement (changement de mode pendant qu'on dicte).
-  useEffect(() => () => recognitionRef.current?.stop(), [])
+  // Coupe proprement dictée et lecture si le composant est démonté.
+  useEffect(() => () => { recognitionRef.current?.stop(); window.speechSynthesis?.cancel() }, [])
 
-
-  // Dictée vocale : Web Speech API, déjà utilisée pour la synthèse (TTS) côté
-  // navigateur, ici dans l'autre sens (micro -> texte).
   const toggleDictation = () => {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition
     if (!SpeechRecognition) { setFileError("La dictée vocale n'est pas supportée par ce navigateur."); return }
     if (listening) { recognitionRef.current?.stop(); return }
-
     const recognition = new SpeechRecognition()
     recognition.lang = 'fr-FR'
     recognition.interimResults = false
@@ -129,10 +158,26 @@ export default function ChatMode() {
     setListening(true)
   }
 
-  // Ajoute un message assistant vide puis le remplit morceau par morceau au
-  // fil du streaming. En cas d'échec (hors arrêt volontaire), on retire ce
-  // message vide ; l'erreur s'affiche via le bandeau ErrorBanner.
+  // Lecture à voix haute d'une réponse (synthèse vocale du navigateur).
+  const toggleSpeak = (i, text) => {
+    const synth = window.speechSynthesis
+    if (!synth) { setFileError("La synthèse vocale n'est pas supportée par ce navigateur."); return }
+    if (speakingIdx === i) { synth.cancel(); setSpeakingIdx(null); return }
+    synth.cancel()
+    const utt = new SpeechSynthesisUtterance(toSpeakable(text))
+    const fr = synth.getVoices().find(v => v.lang.startsWith('fr'))
+    if (fr) utt.voice = fr
+    utt.lang = fr?.lang || 'fr-FR'
+    utt.onend = () => setSpeakingIdx(null)
+    utt.onerror = () => setSpeakingIdx(null)
+    setSpeakingIdx(i)
+    synth.speak(utt)
+  }
+
+  // Ajoute un message assistant vide puis le remplit au fil du streaming.
+  // On mesure la durée de génération pour l'afficher sous la réponse.
   const appendAssistantStreamed = async (apiCallFn) => {
+    const t0 = Date.now()
     setMessages(prev => [...prev, { role: 'assistant', content: '' }])
     const onChunk = (delta) => {
       setMessages(prev => {
@@ -144,28 +189,31 @@ export default function ChatMode() {
     }
     const data = await apiCallFn(onChunk)
     if (!data) setMessages(prev => prev.slice(0, -1))
+    else if (!data.aborted) {
+      const ms = Date.now() - t0
+      setMessages(prev => { const next = [...prev]; next[next.length - 1] = { ...next[next.length - 1], ms }; return next })
+    }
     return data
   }
 
   const sendFromMessages = async (newMessages) => {
-    const contextWindow = newMessages.slice(-MAX_CONTEXT_MESSAGES)
+    // L'API ne reçoit que role + content (pas les champs internes comme `ms`).
+    const contextWindow = newMessages.slice(-MAX_CONTEXT_MESSAGES).map(({ role, content }) => ({ role, content }))
     await appendAssistantStreamed(onChunk => call('/api/chat', { messages: contextWindow, systemPrompt }, onChunk))
   }
 
   const send = async () => {
     const text = input.trim()
     if (!text || loading) return
+    window.speechSynthesis?.cancel(); setSpeakingIdx(null)
     const newMessages = [...messages, { role: 'user', content: text }]
     setMessages(newMessages)
     setInput('')
-    if (inputRef.current) inputRef.current.style.height = 'auto'
     await sendFromMessages(newMessages)
   }
 
   const handleRetry = async () => { await appendAssistantStreamed(onChunk => retry(onChunk)) }
 
-  // Régénère la dernière réponse de l'assistant : on retire les messages
-  // assistant en fin de conversation puis on renvoie le même contexte.
   const regenerate = async () => {
     if (loading) return
     let end = messages.length
@@ -176,19 +224,12 @@ export default function ChatMode() {
     await sendFromMessages(trimmed)
   }
 
-  // Édition d'un message déjà envoyé : on retire ce message et tout ce qui
-  // suit, on renvoie la version corrigée, puis on régénère la réponse.
-  const startEdit = (i) => {
-    if (loading) return
-    setEditingIndex(i)
-    setEditValue(messages[i].content)
-  }
+  const startEdit = (i) => { if (loading) return; setEditingIndex(i); setEditValue(messages[i].content) }
   const cancelEdit = () => { setEditingIndex(null); setEditValue('') }
   const saveEdit = async () => {
     const text = editValue.trim()
     if (!text) return
-    const i = editingIndex
-    const trimmed = [...messages.slice(0, i), { role: 'user', content: text }]
+    const trimmed = [...messages.slice(0, editingIndex), { role: 'user', content: text }]
     setMessages(trimmed)
     setEditingIndex(null)
     setEditValue('')
@@ -208,15 +249,15 @@ export default function ChatMode() {
 
   const exportPrintable = () => {
     const win = window.open('', '_blank')
-    if (!win) { setFileError('Le navigateur a bloqué la fenêtre d\'impression (pop-up).'); return }
+    if (!win) { setFileError("Le navigateur a bloqué la fenêtre d'impression (pop-up)."); return }
     const body = messages.map(m =>
       `<div class="msg ${m.role}"><strong>${m.role === 'user' ? 'Vous' : 'ObedGPT'}</strong><div>${escapeHtml(m.content).replace(/\n/g, '<br/>')}</div></div>`
     ).join('')
     win.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>ObedGPT — Conversation</title><style>
-      body{font-family:Arial,Helvetica,sans-serif;max-width:720px;margin:2rem auto;color:#1c1917;line-height:1.6;padding:0 1rem}
+      body{font-family:Arial,Helvetica,sans-serif;max-width:720px;margin:2rem auto;color:#121714;line-height:1.6;padding:0 1rem}
       h2{font-family:Georgia,serif}
-      .msg{margin-bottom:1.25rem;padding-bottom:1rem;border-bottom:1px solid #eee}
-      .msg.user strong{color:#ea580c} .msg.assistant strong{color:#1c1917}
+      .msg{margin-bottom:1.25rem;padding-bottom:1rem;border-bottom:1px solid #e3e5df}
+      .msg.user strong{color:#0e7a5c} .msg.assistant strong{color:#121714}
       strong{display:block;margin-bottom:.25rem;font-size:.8rem;text-transform:uppercase;letter-spacing:.03em}
     </style></head><body><h2>Conversation ObedGPT</h2>${body}</body></html>`)
     win.document.close()
@@ -224,47 +265,51 @@ export default function ChatMode() {
     setTimeout(() => win.print(), 250)
   }
 
-  const onKeyDown = e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send() } }
-  const reset = () => { setMessages([]); clearError(); setFileError(null); cancelEdit() }
+  const pickSlash = (s) => { setInput(s.tpl); setTimeout(() => inputRef.current?.focus(), 0) }
+
+  const onKeyDown = e => {
+    if (slashMatches.length > 0) {
+      if (e.key === 'ArrowDown') { e.preventDefault(); setSlashIdx(i => (i + 1) % slashMatches.length); return }
+      if (e.key === 'ArrowUp') { e.preventDefault(); setSlashIdx(i => (i - 1 + slashMatches.length) % slashMatches.length); return }
+      if (e.key === 'Enter' || e.key === 'Tab') { e.preventDefault(); pickSlash(slashMatches[slashIdx]); return }
+      if (e.key === 'Escape') { e.preventDefault(); setInput(''); return }
+    }
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send() }
+  }
+  const reset = () => { window.speechSynthesis?.cancel(); setSpeakingIdx(null); setMessages([]); clearError(); setFileError(null); cancelEdit() }
 
   const lastIsAssistant = messages.length > 0 && messages[messages.length - 1].role === 'assistant' && !loading
+  const fmtMs = ms => ms < 1000 ? `${ms} ms` : `${(ms / 1000).toFixed(1).replace('.', ',')} s`
 
   return (
     <div className="flex flex-col h-full relative">
       <div ref={scrollRef} onScroll={onScroll} className="flex-1 overflow-y-auto overscroll-contain px-4 md:px-6 py-5">
         <div className="chat-col space-y-7 min-h-full flex flex-col">
           {messages.length === 0 && !loading && (
-            <div className="my-auto py-6 text-center">
-              <div className="relative inline-block mb-6">
-                <motion.div className="hero-aura" initial={{ opacity: 0, scale: 0.6 }} animate={{ opacity: [0.7, 1, 0.7], scale: [1, 1.12, 1] }} transition={{ duration: 5, repeat: Infinity, ease: 'easeInOut' }} />
-                <motion.div className="relative" animate={{ y: [0, -5, 0] }} transition={{ duration: 6, repeat: Infinity, ease: 'easeInOut' }}><Logo size={68} animated /></motion.div>
-              </div>
-              <h2 className="text-[1.9rem] md:text-[2.5rem] font-bold tracking-tight leading-tight text-stone-800" aria-label="Comment puis-je vous aider ?">
-                {HEADING.map((w, i) => (
-                  <motion.span key={i} aria-hidden="true" className={`inline-block mr-[0.28em] ${i >= 3 ? 'text-grad' : ''}`} initial={{ opacity: 0, y: 18, filter: 'blur(10px)' }} animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }} transition={{ delay: 0.5 + i * 0.09, duration: 0.6, ease: [0.2, 0, 0, 1] }}>{w}</motion.span>
-                ))}
+            <div className="my-auto py-8">
+              <motion.div className="mb-7" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.3 }}><Logo size={56} animated /></motion.div>
+              <h2 className="hero-title" aria-label={`${heroGreeting} Par quoi commencer ?`}>
+                <span className="line-mask"><motion.span className="block" initial={{ y: '108%' }} animate={{ y: 0 }} transition={{ delay: 0.35, duration: 0.7, ease: easeOut }}>{heroGreeting}</motion.span></span>
+                <span className="line-mask soft"><motion.span className="block" initial={{ y: '108%' }} animate={{ y: 0 }} transition={{ delay: 0.47, duration: 0.7, ease: easeOut }}>Par quoi commencer ?</motion.span></span>
               </h2>
-              <motion.p className="mt-3 text-sm md:text-base text-stone-500 max-w-md mx-auto" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 1.05, duration: 0.5 }}>
-                Posez une question, demandez du code ou dictez votre message.
-              </motion.p>
-              {tempMode && <p className="mt-3 text-xs text-stone-500">Mode temporaire actif : cette conversation ne sera pas sauvegardée.</p>}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-9 text-left">
+              {tempMode && <p className="mt-4 text-sm text-ink3">Mode temporaire actif : cette conversation ne sera pas sauvegardée.</p>}
+              <div className="prompt-list mt-10">
                 {SUGGESTIONS.map(({ text, icon: Icon, sub }, i) => (
-                  <motion.div key={text} initial={{ opacity: 0, y: 24, scale: 0.96 }} animate={{ opacity: 1, y: 0, scale: 1 }} transition={{ ...spring, delay: 1.15 + i * 0.08 }}>
-                    <SpotlightCard onClick={() => { setInput(text); inputRef.current?.focus() }}>
-                      <span className="ico"><Icon size={16} /></span>
-                      <span className="min-w-0">
-                        <span className="block text-sm font-semibold text-stone-800">{text}</span>
-                        <span className="block text-xs text-stone-400 mt-0.5">{sub}</span>
-                      </span>
-                    </SpotlightCard>
-                  </motion.div>
+                  <motion.button key={text} className="prompt-row" onClick={() => { setInput(text); inputRef.current?.focus() }}
+                    initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.8 + i * 0.07, duration: 0.5, ease: easeOut }}>
+                    <Icon size={18} className="p-ico flex-shrink-0" />
+                    <span className="min-w-0 flex-1">
+                      <span className="p-title">{text}</span>
+                      <span className="p-sub">{sub}</span>
+                    </span>
+                    <ArrowRight size={18} className="p-go flex-shrink-0" />
+                  </motion.button>
                 ))}
               </div>
-              <motion.div className="mt-7 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-[11.5px] text-stone-400" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1.6 }}>
-                <span className="hidden sm:flex items-center gap-1.5"><kbd className="fx-kbd">Entrée</kbd> envoyer</span>
+              <motion.div className="mt-6 flex flex-wrap items-center gap-x-5 gap-y-2 text-[12px] text-ink3" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1.3 }}>
+                <span className="hidden sm:flex items-center gap-1.5"><kbd className="fx-kbd">/</kbd> commandes rapides</span>
                 <span className="hidden sm:flex items-center gap-1.5"><kbd className="fx-kbd">Maj</kbd>+<kbd className="fx-kbd">Entrée</kbd> nouvelle ligne</span>
-                <span className="hidden sm:flex items-center gap-1.5"><kbd className="fx-kbd">Ctrl K</kbd> commandes</span>
+                <span className="hidden sm:flex items-center gap-1.5"><kbd className="fx-kbd">Ctrl K</kbd> palette</span>
               </motion.div>
             </div>
           )}
@@ -275,21 +320,21 @@ export default function ChatMode() {
             const isUser = msg.role === 'user'
             const streamingThis = loading && isLast && !isUser
             return (
-              <motion.div key={i} initial={{ opacity: 0, y: 16, scale: 0.98 }} animate={{ opacity: 1, y: 0, scale: 1 }} transition={spring} className={`flex gap-3 group ${isUser ? 'justify-end' : 'justify-start'}`}>
-                {!isUser && <div className={`avatar-wrap mt-0.5 ${streamingThis ? 'live' : ''}`}><span className="ring" /><Logo size={30} thinking={streamingThis && !msg.content} /></div>}
+              <motion.div key={i} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={spring} className={`flex gap-3 group ${isUser ? 'justify-end' : 'justify-start'}`}>
+                {!isUser && <div className="avatar-wrap mt-0.5"><Logo size={28} thinking={streamingThis && !msg.content} /></div>}
                 <div className={`min-w-0 ${isUser ? 'max-w-[86%]' : 'flex-1'}`}>
                   {isEditing ? (
                     <div className="message-user">
-                      <textarea value={editValue} onChange={e => setEditValue(e.target.value)} rows={3} autoFocus aria-label="Modifier le message" className="w-full bg-transparent text-sm text-white outline-none resize-none" />
+                      <textarea value={editValue} onChange={e => setEditValue(e.target.value)} rows={3} autoFocus aria-label="Modifier le message" className="w-full bg-transparent text-sm text-ink outline-none resize-none" />
                       <div className="flex gap-2 justify-end mt-2">
-                        <button onClick={cancelEdit} className="text-xs text-white/80 hover:text-white px-2.5 py-1 rounded-lg">Annuler</button>
-                        <button onClick={saveEdit} className="flex items-center gap-1 text-xs bg-white/20 text-white px-2.5 py-1 rounded-lg hover:bg-white/30"><Check size={12} /> Renvoyer</button>
+                        <button onClick={cancelEdit} className="text-xs text-ink2 hover:text-ink px-2.5 py-1 rounded-lg">Annuler</button>
+                        <button onClick={saveEdit} className="flex items-center gap-1 text-xs px-2.5 py-1 rounded-lg" style={{ background: 'var(--accent)', color: 'var(--accent-ink)' }}><Check size={12} /> Renvoyer</button>
                       </div>
                     </div>
                   ) : (
-                    <div className={isUser ? 'message-user' : 'message-ai'}>
+                    <div className={isUser ? 'message-user' : streamingThis ? 'streaming' : ''}>
                       {isUser
-                        ? <p className="text-sm break-words whitespace-pre-wrap">{msg.content}</p>
+                        ? <p className="text-[.95rem] break-words whitespace-pre-wrap">{msg.content}</p>
                         : (msg.content ? <MarkdownRenderer content={msg.content} /> : <ThinkingSkeleton />)}
                     </div>
                   )}
@@ -299,9 +344,13 @@ export default function ChatMode() {
                     </div>
                   )}
                   {!isEditing && !isUser && msg.content && !streamingThis && (
-                    <div className="flex items-center gap-1 mt-1.5 -ml-1.5">
+                    <div className="flex items-center gap-0.5 mt-1.5 -ml-2 flex-wrap">
                       <button onClick={() => copyMessage(msg.content)} aria-label="Copier cette réponse" className="mini-action"><Copy size={12} /> Copier</button>
+                      <button onClick={() => toggleSpeak(i, msg.content)} aria-label={speakingIdx === i ? 'Arrêter la lecture' : 'Lire à voix haute'} aria-pressed={speakingIdx === i} className="mini-action">
+                        {speakingIdx === i ? <Square size={11} fill="currentColor" /> : <Volume2 size={12} />} {speakingIdx === i ? 'Arrêter' : 'Écouter'}
+                      </button>
                       {isLast && lastIsAssistant && <button onClick={regenerate} aria-label="Régénérer cette réponse" className="mini-action"><RefreshCw size={12} /> Régénérer</button>}
+                      {msg.ms != null && <span className="meta-time" title="Durée de génération">{fmtMs(msg.ms)}</span>}
                     </div>
                   )}
                 </div>
@@ -325,23 +374,36 @@ export default function ChatMode() {
 
       <div className="composer-wrap">
         {fileError && (
-          <div className="chat-col pb-2"><p className="text-xs text-red-500 flex items-center justify-between">{fileError}
-            <button onClick={() => setFileError(null)} aria-label="Fermer ce message" className="text-stone-400 hover:text-stone-600 ml-2"><X size={12} /></button></p></div>
+          <div className="chat-col pb-2"><p className="text-xs text-danger flex items-center justify-between">{fileError}
+            <button onClick={() => setFileError(null)} aria-label="Fermer ce message" className="text-ink3 hover:text-ink ml-2"><X size={12} /></button></p></div>
         )}
         <div className={`composer ${loading ? 'busy' : ''}`}>
+          <span className="progress" />
+          <AnimatePresence>
+            {slashMatches.length > 0 && (
+              <motion.div className="slash-menu" role="listbox" aria-label="Commandes rapides" initial={{ opacity: 0, y: 8, scale: 0.98 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 6 }} transition={{ duration: 0.15 }}>
+                {slashMatches.map((s, i) => (
+                  <button key={s.cmd} role="option" aria-selected={i === slashIdx} className={`slash-item ${i === slashIdx ? 'sel' : ''}`} onMouseMove={() => setSlashIdx(i)} onMouseDown={e => { e.preventDefault(); pickSlash(s) }}>
+                    <span className="cmd">{s.cmd}</span><span className="hint">{s.hint}</span>
+                  </button>
+                ))}
+              </motion.div>
+            )}
+          </AnimatePresence>
           <div className="relative">
             <RotatingPlaceholder hidden={!!input || loading} />
             <textarea ref={inputRef} value={input} onChange={e => setInput(e.target.value)} onKeyDown={onKeyDown} rows={1} disabled={loading} aria-label="Message à envoyer"
-              style={{ minHeight: '46px', maxHeight: '170px' }} onInput={e => { e.target.style.height = 'auto'; e.target.style.height = Math.min(e.target.scrollHeight, 170) + 'px' }} />
+              style={{ minHeight: '46px', maxHeight: '170px' }} />
           </div>
           <div className="flex items-center gap-0.5 px-0.5 pt-0.5">
             <button onClick={toggleDictation} title={listening ? 'Arrêter la dictée' : 'Dicter un message'} aria-label={listening ? 'Arrêter la dictée vocale' : 'Démarrer la dictée vocale'} aria-pressed={listening}
-              className={`icon-btn ${listening ? '!text-red-500 !bg-red-500/10' : ''}`}>
+              className="icon-btn" style={listening ? { color: 'var(--danger)', background: 'var(--surface-2)' } : undefined}>
               {listening ? <span className="mic-wave" aria-hidden="true"><i /><i /><i /><i /></span> : <Mic size={17} />}
             </button>
+            <button onClick={() => { setInput('/'); inputRef.current?.focus() }} title="Commandes rapides" aria-label="Ouvrir les commandes rapides" className="icon-btn hidden sm:inline-grid"><Slash size={16} /></button>
             {messages.length > 0 && (
               <>
-                <button onClick={reset} aria-label="Nouvelle conversation" title="Vider la conversation" className="icon-btn"><RotateCcw size={16} /></button>
+                <button onClick={reset} aria-label="Vider la conversation" title="Vider la conversation" className="icon-btn"><RotateCcw size={16} /></button>
                 <button onClick={exportMarkdown} aria-label="Exporter en Markdown" title="Exporter en Markdown" className="icon-btn hidden sm:inline-grid"><Download size={16} /></button>
                 <button onClick={exportPrintable} aria-label="Imprimer / Exporter en PDF" title="Imprimer / PDF" className="icon-btn hidden sm:inline-grid"><Printer size={16} /></button>
               </>
@@ -349,9 +411,9 @@ export default function ChatMode() {
             <div className="flex-1" />
             <AnimatePresence mode="wait" initial={false}>
               {loading ? (
-                <motion.button key="stop" onClick={abort} aria-label="Arrêter la génération" title="Arrêter" className="send-btn btn-primary" initial={{ scale: 0.5, opacity: 0, rotate: -90 }} animate={{ scale: 1, opacity: 1, rotate: 0 }} exit={{ scale: 0.5, opacity: 0 }} transition={spring}><Square size={13} fill="currentColor" /></motion.button>
+                <motion.button key="stop" onClick={abort} aria-label="Arrêter la génération" title="Arrêter" className="send-btn btn-primary" initial={{ scale: 0.6, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.6, opacity: 0 }} transition={spring}><Square size={13} fill="currentColor" /></motion.button>
               ) : (
-                <motion.button key="send" ref={sendBtnRef} onClick={send} disabled={!input.trim()} aria-label="Envoyer le message" className="send-btn btn-primary" initial={{ scale: 0.5, opacity: 0, rotate: 90 }} animate={{ scale: input.trim() ? 1 : 0.92, opacity: 1, rotate: 0 }} exit={{ scale: 0.5, opacity: 0 }} whileTap={{ scale: 0.88 }} transition={spring}><Send size={16} /></motion.button>
+                <motion.button key="send" onClick={send} disabled={!input.trim()} aria-label="Envoyer le message" className="send-btn btn-primary" initial={{ scale: 0.6, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.6, opacity: 0 }} whileTap={{ scale: 0.88 }} transition={spring}><Send size={16} /></motion.button>
               )}
             </AnimatePresence>
           </div>

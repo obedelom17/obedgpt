@@ -3,26 +3,26 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <title>ObedGPT — Interface IA Multi-Modal</title>
-    <meta name="description" content="ObedGPT — Chat, Code, Web Search et plus. IA multi-modale gratuite." />
+    <title>ObedGPT — Assistant IA</title>
+    <meta name="description" content="ObedGPT — Assistant IA propulsé par Groq : chat, code et synthèse vocale." />
 
-    <!-- Détection du thème système avant le premier rendu : évite le
-         flash d'un thème incorrect (FOUC) au chargement de la page. -->
+    <!-- Thème + accent appliqués avant le premier rendu (évite le flash). -->
     <script>
       try {
         var pref = localStorage.getItem('obedgpt-theme-pref') || 'auto'
         var dark = pref === 'auto' ? window.matchMedia('(prefers-color-scheme: dark)').matches : pref === 'dark'
         if (dark) document.documentElement.classList.add('dark')
+        var acc = localStorage.getItem('obedgpt-accent')
+        if (acc && acc !== 'vert') document.documentElement.setAttribute('data-accent', acc)
       } catch (e) {}
     </script>
 
-    <!-- Icônes & PWA (installation sur ordinateur, iOS et Android) -->
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <link rel="icon" href="/icon-192.png" sizes="192x192" type="image/png" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <link rel="manifest" href="/manifest.json" />
-    <meta name="theme-color" media="(prefers-color-scheme: light)" content="#fafafa" />
-    <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0b0b0e" />
+    <meta name="theme-color" media="(prefers-color-scheme: light)" content="#f3f4f0" />
+    <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0b0f0d" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
@@ -30,14 +30,14 @@
 
     <meta property="og:type" content="website" />
     <meta property="og:url" content="https://obedgpt.vercel.app/" />
-    <meta property="og:title" content="ObedGPT — Interface IA Multi-Modal" />
+    <meta property="og:title" content="ObedGPT — Assistant IA" />
     <meta property="og:description" content="Assistant IA propulsé par Groq : chat, code et synthèse vocale." />
     <meta property="og:image" content="https://obedgpt.vercel.app/og-image.png" />
     <meta property="og:locale" content="fr_FR" />
     <meta name="twitter:card" content="summary_large_image" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700;12..96,800&family=Instrument+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
   </head>
   <body>
     <div id="root"></div>

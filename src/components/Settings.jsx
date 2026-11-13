@@ -1,10 +1,13 @@
-import { useState, useRef } from 'react'
-import { Zap, Trash2, User, Download, Upload, Sun, Moon, Monitor, Type, Sparkles, Info, Mail, Github } from 'lucide-react'
+import { useState, useRef, useEffect } from 'react'
+import { motion } from 'framer-motion'
+import { Check, User, Download, Upload, Sun, Moon, Monitor, Mail, Github } from 'lucide-react'
 import { useApp } from '../App'
-import { useTheme } from '../hooks/useTheme.jsx'
+import { useTheme, ACCENTS } from '../hooks/useTheme.jsx'
+import Logo from './Logo'
 
 const PERSONA_KEY = 'obedgpt-persona'
 const CHANGELOG = [
+  { date: 'Novembre 2026', items: ['Nouvelle identité visuelle et nouveau logo', 'Commandes rapides avec /', "Lecture à voix haute des réponses", 'Choix de la couleur d\'accent'] },
   { date: 'Juin 2026', items: ['Mode sombre automatique', 'Application installable (PWA)', 'Réponses en streaming', 'Dictée vocale & micro live'] },
   { date: 'Mai 2026',  items: ['Refonte navigation & économie de tokens', 'Export/Import de l\'historique'] },
 ]
@@ -38,7 +41,7 @@ function resizeImage(file, maxSize = 256) {
 
 export default function Settings() {
   const { history, clearHistory, importHistory } = useApp()
-  const { themePref, setThemePref, fontSize, setFontSize } = useTheme()
+  const { themePref, setThemePref, fontSize, setFontSize, accent, setAccent } = useTheme()
   const [avatar, setAvatar] = useState(() => localStorage.getItem('obedgpt-avatar') || '')
   const [avatarError, setAvatarError] = useState(null)
   const [importMessage, setImportMessage] = useState(null)
@@ -108,164 +111,139 @@ export default function Settings() {
   }
 
   return (
-    <div className="h-full overflow-y-auto p-3 md:p-4">
-      <div className="max-w-3xl mx-auto space-y-4 md:space-y-6">
-
-        {/* Header */}
-        <div className="card p-4 md:p-6">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 md:w-10 md:h-10 rounded-xl amber-gradient flex items-center justify-center flex-shrink-0">
-              <Zap size={16} className="text-white" />
-            </div>
-            <div className="min-w-0">
-              <h2 className="font-display font-bold text-stone-800 text-base md:text-lg">ObedGPT</h2>
-              <p className="text-xs text-stone-400">IA multi-modale</p>
-            </div>
+    <div className="page">
+      <div className="page-inner">
+        <div className="flex items-center gap-4 mb-1">
+          <Logo size={44} />
+          <div>
+            <h2 className="page-title !mb-0">Paramètres</h2>
           </div>
         </div>
+        <p className="page-sub mt-2">Apparence, personnalité de l'assistant et gestion de tes conversations. Tout reste dans ce navigateur.</p>
 
-        {/* Avatar / Photo */}
-        <div className="card p-4 md:p-6">
-          <h3 className="font-display font-semibold text-stone-800 mb-3 md:mb-4 flex items-center gap-2 text-sm md:text-base">
-            <User size={16} /> Photo de profil
-          </h3>
-          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
-            {avatar ? (
-              <img src={avatar} alt="Avatar" className="w-14 h-14 md:w-16 md:h-16 rounded-xl object-cover border border-orange-200 flex-shrink-0" />
-            ) : (
-              <div className="w-14 h-14 md:w-16 md:h-16 rounded-xl bg-orange-50 border border-orange-200 flex items-center justify-center flex-shrink-0">
-                <User size={22} className="text-orange-400" />
-              </div>
-            )}
-            <div className="flex gap-2 flex-wrap">
-              <label className="px-3 py-2 rounded-lg bg-orange-50 border border-orange-200 text-orange-600 text-sm cursor-pointer hover:bg-orange-100 transition-colors">
-                <input type="file" accept="image/*" onChange={handleAvatarChange} className="hidden" />
-                Changer
-              </label>
-              {avatar && (
-                <button onClick={removeAvatar}
-                  className="px-3 py-2 rounded-lg bg-red-50 border border-red-200 text-red-600 text-sm hover:bg-red-100 transition-colors">
-                  Supprimer
-                </button>
+        <section className="row">
+          <div><h3>Photo de profil</h3><p className="desc">JPG, PNG ou WebP, redimensionnée automatiquement.</p></div>
+          <div>
+            <div className="flex items-center gap-4">
+              {avatar ? (
+                <img src={avatar} alt="Avatar" className="w-16 h-16 rounded-2xl object-cover flex-shrink-0" style={{ border: '1px solid var(--border-strong)' }} />
+              ) : (
+                <div className="w-16 h-16 rounded-2xl flex items-center justify-center flex-shrink-0" style={{ background: 'var(--surface-2)', border: '1px solid var(--border)' }}>
+                  <User size={24} className="text-ink3" />
+                </div>
               )}
+              <div className="flex gap-2 flex-wrap">
+                <label className="btn-ghost cursor-pointer">
+                  <input type="file" accept="image/*" onChange={handleAvatarChange} className="hidden" />
+                  Changer
+                </label>
+                {avatar && <button onClick={removeAvatar} className="btn-ghost danger">Supprimer</button>}
+              </div>
             </div>
+            {avatarError && <p className="text-xs text-danger mt-2">{avatarError}</p>}
           </div>
-          <p className="text-xs text-stone-400 mt-2">JPG, PNG, WebP — Max 8MB, redimensionnée automatiquement</p>
-          {avatarError && <p className="text-xs text-red-500 mt-1">{avatarError}</p>}
-        </div>
+        </section>
 
-        {/* Apparence */}
-        <div className="card p-4 md:p-6">
-          <h3 className="font-display font-semibold text-stone-800 mb-3 md:mb-4 flex items-center gap-2 text-sm md:text-base">
-            <Sun size={16} /> Apparence
-          </h3>
-          <div className="space-y-4">
+        <section className="row">
+          <div><h3>Apparence</h3><p className="desc">Le mode « Auto » suit le thème de ton système.</p></div>
+          <div className="space-y-5">
             <div>
-              <div className="text-sm font-medium text-stone-700 mb-2">Thème</div>
-              <div className="flex gap-2">
-                {[
-                  { id: 'auto',  label: 'Auto',   Icon: Monitor },
-                  { id: 'light', label: 'Clair',  Icon: Sun },
-                  { id: 'dark',  label: 'Sombre', Icon: Moon },
-                ].map(({ id, label, Icon }) => (
-                  <button key={id} onClick={() => setThemePref(id)} aria-pressed={themePref === id}
-                    className={`flex-1 flex flex-col items-center gap-1 py-2.5 rounded-xl border text-xs transition-colors ${themePref === id ? 'bg-orange-50 border-orange-300 text-orange-600 font-medium' : 'border-orange-100 text-stone-500 hover:bg-orange-50/60'}`}>
-                    <Icon size={16} />{label}
+              <span className="field-label">Thème</span>
+              <div className="segmented" role="group" aria-label="Thème">
+                {[{ id: 'auto', label: 'Auto', Icon: Monitor }, { id: 'light', label: 'Clair', Icon: Sun }, { id: 'dark', label: 'Sombre', Icon: Moon }].map(({ id, label, Icon }) => (
+                  <button key={id} onClick={() => setThemePref(id)} aria-pressed={themePref === id}>
+                    {themePref === id && <motion.span layoutId="theme-seg" className="seg-pill" transition={{ type: 'spring', stiffness: 460, damping: 36 }} />}
+                    <span><Icon size={14} />{label}</span>
                   </button>
                 ))}
               </div>
-              <p className="text-xs text-stone-400 mt-1.5">"Auto" suit le thème de ton système.</p>
             </div>
             <div>
-              <div className="text-sm font-medium text-stone-700 mb-2 flex items-center gap-1.5"><Type size={14} /> Taille du texte</div>
-              <div className="flex gap-2">
+              <span className="field-label">Couleur d'accent</span>
+              <div className="flex gap-3">
+                {ACCENTS.map(a => (
+                  <button key={a.id} onClick={() => setAccent(a.id)} aria-pressed={accent === a.id} aria-label={`Accent ${a.label}`} title={a.label} className="swatch" style={{ background: a.swatch }}>
+                    {accent === a.id && <motion.span initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: 'spring', stiffness: 500, damping: 18 }}><Check size={16} color="#fff" strokeWidth={3} /></motion.span>}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div>
+              <span className="field-label">Taille du texte</span>
+              <div className="segmented" role="group" aria-label="Taille du texte">
                 {[{ id: 'sm', label: 'Petit' }, { id: 'md', label: 'Normal' }, { id: 'lg', label: 'Grand' }].map(({ id, label }) => (
-                  <button key={id} onClick={() => setFontSize(id)} aria-pressed={fontSize === id}
-                    className={`flex-1 py-2 rounded-xl border text-xs transition-colors ${fontSize === id ? 'bg-orange-50 border-orange-300 text-orange-600 font-medium' : 'border-orange-100 text-stone-500 hover:bg-orange-50/60'}`}>
-                    {label}
+                  <button key={id} onClick={() => setFontSize(id)} aria-pressed={fontSize === id}>
+                    {fontSize === id && <motion.span layoutId="font-seg" className="seg-pill" transition={{ type: 'spring', stiffness: 460, damping: 36 }} />}
+                    <span>{label}</span>
                   </button>
                 ))}
               </div>
             </div>
           </div>
-        </div>
+        </section>
 
-        {/* Personnalité du Chat */}
-        <div className="card p-4 md:p-6">
-          <h3 className="font-display font-semibold text-stone-800 mb-3 md:mb-4 flex items-center gap-2 text-sm md:text-base">
-            <Sparkles size={16} /> Personnalité du Chat
-          </h3>
-          <textarea value={persona} onChange={e => setPersona(e.target.value)} onBlur={savePersona} rows={3} maxLength={300}
-            placeholder="Ex : Réponds toujours de façon concise. Tutoie-moi. Explique comme à un débutant en programmation."
-            aria-label="Instructions de personnalité pour le Chat" className="input-field w-full resize-none text-sm" />
-          <div className="flex items-center justify-between mt-2">
-            <p className="text-xs text-stone-400">Ajouté à chaque conversation du mode Chat.</p>
-            {personaSaved && <span className="text-xs text-orange-500">Enregistré ✓</span>}
-          </div>
-        </div>
-
-        {/* History Management */}
-        <div className="card p-4 md:p-6">
-          <h3 className="font-display font-semibold text-stone-800 mb-3 md:mb-4 flex items-center gap-2 text-sm md:text-base">
-            <Trash2 size={16} /> Historique
-          </h3>
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 rounded-xl bg-stone-50 border border-orange-100">
-            <div>
-              <div className="text-sm font-medium text-stone-700">Conversations sauvegardées</div>
-              <div className="text-xs text-stone-400">{history.length} conversation{history.length !== 1 ? 's' : ''}</div>
+        <section className="row">
+          <div><h3>Personnalité du chat</h3><p className="desc">Ajoutée à chaque conversation du mode Chat. Elle s'applique aux nouvelles conversations.</p></div>
+          <div>
+            <textarea value={persona} onChange={e => setPersona(e.target.value)} onBlur={savePersona} rows={4} maxLength={300}
+              placeholder="Ex : Réponds toujours de façon concise. Tutoie-moi. Explique comme à un débutant en programmation."
+              aria-label="Instructions de personnalité pour le Chat" className="input-field w-full resize-none text-sm" />
+            <div className="flex items-center justify-between mt-2 text-xs text-ink3">
+              <span className="font-mono">{persona.length}/300</span>
+              {personaSaved && <span className="text-accent">Enregistré</span>}
             </div>
-            <div className="flex gap-2 flex-wrap w-full sm:w-auto">
-              <button onClick={exportHistory} disabled={history.length === 0} aria-label="Exporter l'historique en JSON"
-                className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-orange-50 border border-orange-200 text-orange-600 text-sm hover:bg-orange-100 transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
-                <Download size={14} /> Exporter
-              </button>
-              <label className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-orange-50 border border-orange-200 text-orange-600 text-sm cursor-pointer hover:bg-orange-100 transition-colors">
+          </div>
+        </section>
+
+        <section className="row">
+          <div><h3>Historique</h3><p className="desc">Les conversations ne vivent que dans ce navigateur. Exporte-les pour les retrouver sur un autre appareil.</p></div>
+          <div>
+            <p className="text-sm mb-3"><span className="font-mono text-accent">{history.length}</span> conversation{history.length !== 1 ? 's' : ''} sauvegardée{history.length !== 1 ? 's' : ''}</p>
+            <div className="flex gap-2 flex-wrap">
+              <button onClick={exportHistory} disabled={history.length === 0} aria-label="Exporter l'historique en JSON" className="btn-ghost disabled:opacity-40 disabled:cursor-not-allowed"><Download size={14} /> Exporter</button>
+              <label className="btn-ghost cursor-pointer">
                 <input ref={importInputRef} type="file" accept="application/json,.json" onChange={handleImportFile} className="hidden" aria-label="Importer un historique JSON" />
                 <Upload size={14} /> Importer
               </label>
-              <button onClick={clearHistory} aria-label="Effacer tout l'historique"
-                className="px-3 py-2 rounded-lg bg-red-50 border border-red-200 text-red-600 text-sm hover:bg-red-100 transition-colors">
-                Tout effacer
-              </button>
+              <ClearButton onConfirm={clearHistory} disabled={history.length === 0} />
+            </div>
+            {importMessage && <p className={`text-xs mt-3 ${importMessage.type === 'ok' ? 'text-accent' : 'text-danger'}`}>{importMessage.text}</p>}
+          </div>
+        </section>
+
+        <section className="row">
+          <div><h3>À propos</h3><p className="desc">React, Vite, Tailwind, Vercel. Modèle servi par Groq.</p></div>
+          <div>
+            <p className="text-sm text-ink2 mb-4">ObedGPT est développé par <span className="font-semibold text-ink">Obed Elom AGBEBAVI</span>.</p>
+            <div className="space-y-4 mb-5">
+              {CHANGELOG.map(entry => (
+                <div key={entry.date}>
+                  <div className="text-xs font-mono font-medium text-accent mb-1">{entry.date}</div>
+                  <ul className="text-sm text-ink2 space-y-0.5 pl-4 list-disc">
+                    {entry.items.map(item => <li key={item}>{item}</li>)}
+                  </ul>
+                </div>
+              ))}
+            </div>
+            <div className="flex gap-2 flex-wrap">
+              <a href="mailto:agbebaviobedelom@gmail.com?subject=Feedback%20ObedGPT" aria-label="Envoyer un feedback par e-mail" className="btn-ghost"><Mail size={14} /> Feedback</a>
+              <a href="https://github.com/obedelom17/obedgpt" target="_blank" rel="noopener noreferrer" aria-label="Voir le code source sur GitHub" className="btn-ghost"><Github size={14} /> Code source</a>
             </div>
           </div>
-          {importMessage && (
-            <p className={`text-xs mt-2 ${importMessage.type === 'ok' ? 'text-orange-600' : 'text-red-500'}`}>{importMessage.text}</p>
-          )}
-          <p className="text-xs text-stone-400 mt-2">L'export te permet de garder une copie de tes conversations (elles ne vivent que dans ce navigateur) et de les retrouver sur un autre appareil via "Importer".</p>
-        </div>
-
-        {/* À propos */}
-        <div className="card p-4 md:p-6">
-          <h3 className="font-display font-semibold text-stone-800 mb-3 md:mb-4 flex items-center gap-2 text-sm md:text-base">
-            <Info size={16} /> À propos
-          </h3>
-          <p className="text-sm text-stone-600 mb-4">
-            ObedGPT est développé par <span className="font-medium text-stone-800">Obed Elom AGBEBAVI</span> — React, Vite, Tailwind, Vercel.
-          </p>
-          <div className="space-y-3 mb-4">
-            {CHANGELOG.map(entry => (
-              <div key={entry.date}>
-                <div className="text-xs font-mono font-medium text-orange-500 mb-1">{entry.date}</div>
-                <ul className="text-xs text-stone-500 space-y-0.5 pl-4 list-disc">
-                  {entry.items.map(item => <li key={item}>{item}</li>)}
-                </ul>
-              </div>
-            ))}
-          </div>
-          <div className="flex gap-2 flex-wrap pt-3 border-t border-orange-100">
-            <a href="mailto:agbebaviobedelom@gmail.com?subject=Feedback%20ObedGPT" aria-label="Envoyer un feedback par e-mail"
-              className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-orange-50 border border-orange-200 text-orange-600 text-sm hover:bg-orange-100 transition-colors">
-              <Mail size={14} /> Feedback
-            </a>
-            <a href="https://github.com/obedelom17/obedgpt" target="_blank" rel="noopener noreferrer" aria-label="Voir le code source sur GitHub"
-              className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-stone-50 border border-orange-100 text-stone-600 text-sm hover:bg-orange-50 transition-colors">
-              <Github size={14} /> Code source
-            </a>
-          </div>
-        </div>
-
+        </section>
       </div>
     </div>
+  )
+}
+
+// Effacement en deux temps : un premier clic demande confirmation.
+function ClearButton({ onConfirm, disabled }) {
+  const [armed, setArmed] = useState(false)
+  useEffect(() => { if (!armed) return; const t = setTimeout(() => setArmed(false), 3000); return () => clearTimeout(t) }, [armed])
+  return (
+    <button disabled={disabled} aria-label="Effacer tout l'historique" onClick={() => { if (armed) { onConfirm(); setArmed(false) } else setArmed(true) }}
+      className="btn-ghost danger disabled:opacity-40 disabled:cursor-not-allowed" style={armed ? { color: 'var(--danger)', borderColor: 'var(--danger)' } : undefined}>
+      {armed ? 'Confirmer : tout effacer' : 'Tout effacer'}
+    </button>
   )
 }

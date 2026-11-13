@@ -6,7 +6,6 @@ import Sidebar from './components/layout/Sidebar'
 import ChatMode from './components/modes/ChatMode'
 import { LoadingDots } from './components/ui'
 import { MotionConfig, AnimatePresence, motion } from 'framer-motion'
-import Ambient from './components/fx/Ambient'
 import CommandPalette from './components/fx/CommandPalette'
 import { ToastProvider } from './components/fx/Toast'
 
@@ -107,15 +106,14 @@ export default function App() {
       <ToastProvider>
         <AppContext.Provider value={contextValue}>
          <MotionConfig reducedMotion="user">
-          <Ambient busy={busy} />
           <div className="shell">
             <Sidebar />
             <div className="flex flex-col flex-1 min-w-0 min-h-0">
               <Header mode={MODES[activeMode]?.label} />
               <main className="flex-1 min-h-0 overflow-hidden relative">
                 <AnimatePresence mode="wait" initial={false}>
-                  <motion.div key={activeMode} className={`h-full ${activeMode !== 'chat' ? 'page-stagger' : ''}`}
-                    initial={{ opacity: 0, y: 14, filter: 'blur(6px)' }} animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }} exit={{ opacity: 0, y: -8, filter: 'blur(4px)' }} transition={{ duration: 0.2, ease: [0.2, 0, 0, 1] }}>
+                  <motion.div key={activeMode} className="h-full"
+                    initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={{ duration: 0.18, ease: [0.2, 0, 0, 1] }}>
                     <Suspense fallback={<div className="h-full flex items-center justify-center"><LoadingDots label="Chargement..." /></div>}>
                       <ActiveComponent key={activeChatId} />
                     </Suspense>

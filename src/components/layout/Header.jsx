@@ -10,13 +10,13 @@ export default function Header({ mode }) {
       <button onClick={() => setSidebarOpen(true)} className="icon-btn md:hidden" aria-label="Ouvrir le menu"><Menu size={18} /></button>
       <div className="overflow-hidden flex-1 min-w-0 flex items-center gap-3">
         <AnimatePresence mode="wait" initial={false}>
-          <motion.h1 key={mode} className="truncate" initial={{ opacity: 0, y: 10, filter: 'blur(4px)' }} animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }} exit={{ opacity: 0, y: -10, filter: 'blur(4px)' }} transition={{ duration: 0.18 }}>
+          <motion.h1 key={mode} className="truncate" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.16 }}>
             {mode}
           </motion.h1>
         </AnimatePresence>
         <span className="model-chip hidden sm:inline-flex" title="Modèle propulsé par Groq">
           <span className={`live-dot ${busy ? 'busy' : ''}`} />
-          Groq · gpt-oss-120b
+          {busy ? 'Génération…' : 'Groq · gpt-oss-120b'}
         </span>
       </div>
       <button onClick={openPalette} className="search-btn hidden sm:inline-flex" aria-label="Ouvrir la recherche de commandes">
