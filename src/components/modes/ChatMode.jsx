@@ -10,6 +10,8 @@ import { useApp } from '../../App'
 const BASE_SYSTEM_PROMPT = "Tu es ObedGPT, un assistant IA intelligent créé par Obed Elom AGBEBAVI. Si on te demande qui t'a créé/développé, réponds que c'est Obed Elom AGBEBAVI. Réponds dans la langue de l'utilisateur. Utilise LaTeX pour les maths : $...$ inline, $$...$$ pour les blocs."
 const PERSONA_KEY = 'obedgpt-persona'
 const PLACEHOLDERS = ['Expliquez-moi la récursivité avec un exemple...', 'Écris une fonction Python qui trie une liste...', 'Résous cette équation : 2x² − 5x + 2 = 0', 'Aide-moi à préparer un exposé sur le climat...', 'Traduis ce paragraphe en anglais...']
+// Pose --mx/--my pour le halo qui suit le curseur (voir .spot dans index.css)
+const trackPointer = e => { const r = e.currentTarget.getBoundingClientRect(); e.currentTarget.style.setProperty('--mx', `${e.clientX - r.left}px`); e.currentTarget.style.setProperty('--my', `${e.clientY - r.top}px`) }
 const spring = { type: 'spring', stiffness: 380, damping: 30 }
 const easeOut = [0.2, 0, 0, 1]
 
@@ -119,9 +121,12 @@ export default function ChatMode() {
   const scrollRef = useRef(null)
   const stickRef = useRef(true)
   const [showFab, setShowFab] = useState(false)
+  const progRef = useRef(null)
   const onScroll = () => {
     const el = scrollRef.current
     if (!el) return
+    const max = el.scrollHeight - el.clientHeight
+    progRef.current?.style.setProperty('--p', max > 0 ? String(el.scrollTop / max) : '0')
     const near = el.scrollHeight - el.scrollTop - el.clientHeight < 90
     stickRef.current = near
     setShowFab(prev => (prev === !near ? prev : !near))
@@ -283,30 +288,31 @@ export default function ChatMode() {
 
   return (
     <div className="flex flex-col h-full relative">
+      {messages.length > 0 && <div ref={progRef} className="read-progress" aria-hidden="true" />}
       <div ref={scrollRef} onScroll={onScroll} className="flex-1 overflow-y-auto overscroll-contain px-4 md:px-6 py-5">
         <div className="chat-col space-y-7 min-h-full flex flex-col">
           {messages.length === 0 && !loading && (
             <div className="my-auto py-8">
-              <motion.div className="mb-7" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.3 }}><Logo size={56} animated /></motion.div>
+              <motion.div className="mb-9 logo-halo" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.3 }}><Logo size={60} animated /></motion.div>
               <h2 className="hero-title" aria-label={`${heroGreeting} Par quoi commencer ?`}>
                 <span className="line-mask"><motion.span className="block" initial={{ y: '108%' }} animate={{ y: 0 }} transition={{ delay: 0.35, duration: 0.7, ease: easeOut }}>{heroGreeting}</motion.span></span>
                 <span className="line-mask soft"><motion.span className="block" initial={{ y: '108%' }} animate={{ y: 0 }} transition={{ delay: 0.47, duration: 0.7, ease: easeOut }}>Par quoi commencer ?</motion.span></span>
               </h2>
               {tempMode && <p className="mt-4 text-sm text-ink3">Mode temporaire actif : cette conversation ne sera pas sauvegardée.</p>}
-              <div className="prompt-list mt-10">
+              <div className="bento mt-10">
                 {SUGGESTIONS.map(({ text, icon: Icon, sub }, i) => (
-                  <motion.button key={text} className="prompt-row" onClick={() => { setInput(text); inputRef.current?.focus() }}
-                    initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.8 + i * 0.07, duration: 0.5, ease: easeOut }}>
-                    <Icon size={18} className="p-ico flex-shrink-0" />
-                    <span className="min-w-0 flex-1">
-                      <span className="p-title">{text}</span>
-                      <span className="p-sub">{sub}</span>
+                  <motion.button key={text} className="bento-card spot" onMouseMove={trackPointer} onClick={() => { setInput(text); inputRef.current?.focus() }}
+                    initial={{ opacity: 0, y: 18, filter: 'blur(6px)' }} animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }} transition={{ delay: 0.8 + i * 0.09, duration: 0.6, ease: easeOut }}>
+                    <span className="b-ico"><Icon size={17} /></span>
+                    <span className="min-w-0">
+                      <span className="b-title">{text}</span>
+                      <span className="b-sub">{sub}</span>
                     </span>
-                    <ArrowRight size={18} className="p-go flex-shrink-0" />
+                    <ArrowRight size={16} className="b-go" />
                   </motion.button>
                 ))}
               </div>
-              <motion.div className="mt-6 flex flex-wrap items-center gap-x-5 gap-y-2 text-[12px] text-ink3" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1.3 }}>
+              <motion.div className="hero-hints mt-6 flex flex-wrap items-center gap-x-5 gap-y-2 text-[12px] text-ink3" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1.3 }}>
                 <span className="hidden sm:flex items-center gap-1.5"><kbd className="fx-kbd">/</kbd> commandes rapides</span>
                 <span className="hidden sm:flex items-center gap-1.5"><kbd className="fx-kbd">Maj</kbd>+<kbd className="fx-kbd">Entrée</kbd> nouvelle ligne</span>
                 <span className="hidden sm:flex items-center gap-1.5"><kbd className="fx-kbd">Ctrl K</kbd> palette</span>

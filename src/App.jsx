@@ -46,7 +46,7 @@ export default function App() {
   const [activeChatId, setActiveChatId] = useState(() => historyManager.createNewId())
   const [tempMode, setTempMode] = useState(false)
   const [sidebarOpen, setSidebarOpen] = useState(false)
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => localStorage.getItem('obedgpt-sidebar-collapsed') === '1')
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => { const v = localStorage.getItem('obedgpt-sidebar-collapsed'); return v === null ? (window.innerWidth >= 768 && window.innerWidth < 1100) : v === '1' })
   const toggleSidebar = useCallback(() => {
     if (window.innerWidth < 768) setSidebarOpen(o => !o)
     else setSidebarCollapsed(c => { localStorage.setItem('obedgpt-sidebar-collapsed', c ? '0' : '1'); return !c })
@@ -107,6 +107,8 @@ export default function App() {
         <AppContext.Provider value={contextValue}>
          <MotionConfig reducedMotion="user">
           <div className="shell">
+            <div className="aurora" aria-hidden="true"><i /><i /><i /></div>
+            <div className="grain" aria-hidden="true" />
             <Sidebar />
             <div className="flex flex-col flex-1 min-w-0 min-h-0">
               <Header mode={MODES[activeMode]?.label} />

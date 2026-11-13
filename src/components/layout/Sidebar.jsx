@@ -104,7 +104,7 @@ export default function Sidebar() {
         drag={isMobile ? 'x' : false} dragConstraints={{ left: -320, right: 0 }} dragElastic={{ left: 0.2, right: 0 }} onDragEnd={(_, i) => { if (i.offset.x < -70 || i.velocity.x < -400) setSidebarOpen(false) }}>
 
         <div className={`brand ${collapsed ? '!justify-center !px-0' : ''}`}>
-          <Logo size={34} />
+          <Logo size={34} tile />
           {!collapsed && <span className="brand-name flex-1">ObedGPT</span>}
           {isMobile && <button onClick={() => setSidebarOpen(false)} className="icon-btn" aria-label="Fermer le menu"><X size={18} /></button>}
         </div>

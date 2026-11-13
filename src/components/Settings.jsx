@@ -7,7 +7,7 @@ import Logo from './Logo'
 
 const PERSONA_KEY = 'obedgpt-persona'
 const CHANGELOG = [
-  { date: 'Novembre 2026', items: ['Nouvelle identité visuelle et nouveau logo', 'Commandes rapides avec /', "Lecture à voix haute des réponses", 'Choix de la couleur d\'accent'] },
+  { date: 'Novembre 2026', items: ['Interface refondue : fond aurore, verre dépoli, halos interactifs, bordure lumineuse', 'Nouveau logo (G géométrique)', 'Commandes rapides avec /', "Lecture à voix haute des réponses", 'Choix de la couleur d\'accent'] },
   { date: 'Juin 2026', items: ['Mode sombre automatique', 'Application installable (PWA)', 'Réponses en streaming', 'Dictée vocale & micro live'] },
   { date: 'Mai 2026',  items: ['Refonte navigation & économie de tokens', 'Export/Import de l\'historique'] },
 ]

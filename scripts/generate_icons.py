@@ -1,20 +1,19 @@
 """Génère les icônes PWA et l'image Open Graph d'ObedGPT à partir du logo :
-une bulle de dialogue en « O » avec un point jaune, sur tuile verte
+un « G » géométrique (arc blanc + barre jaune) sur tuile verte
 (même dessin que public/favicon.svg et src/components/Logo.jsx).
 Usage : python3 scripts/generate_icons.py"""
 import os, math
 from PIL import Image, ImageDraw, ImageFont
 
 OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "public")
-GREEN, YELLOW = (14, 122, 92), (242, 176, 8)
+GREEN, YELLOW = (11, 74, 55), (242, 176, 8)
 SS = 4
 
 
-def bubble_points():
-    cx, cy, r = 50, 48, 25
-    pts = [(cx + r*math.cos(math.radians(a)), cy + r*math.sin(math.radians(a))) for a in range(135, 461, 2)]
-    pts += [(26, 80), pts[0]]
-    return pts
+def arc_points():
+    # Arc du « G » : de -35° (haut droite) en sens antihoraire jusqu'à 0° (milieu droite)
+    cx, cy, r = 50, 50, 28
+    return [(cx + r*math.cos(math.radians(-a)), cy + r*math.sin(math.radians(-a))) for a in [35 + i*2 for i in range(0, 163)] ]
 
 
 def mark(size, scale=1.0, bg=True, square=False, radius=0.23):
@@ -29,13 +28,14 @@ def mark(size, scale=1.0, bg=True, square=False, radius=0.23):
     d = ImageDraw.Draw(img)
     k = s / 100 * scale; off = s * (1 - scale) / 2
     P = lambda p: (off + p[0] * k, off + p[1] * k)
-    w = 9 * k
-    pts = [P(p) for p in bubble_points()]
-    d.line(pts, fill="white", width=int(w), joint="curve")
-    for x, y in pts:
-        d.ellipse([x - w/2, y - w/2, x + w/2, y + w/2], fill="white")
-    cx, cy = P((50, 48)); rr = 7 * k
-    d.ellipse([cx - rr, cy - rr, cx + rr, cy + rr], fill=YELLOW)
+    w = 11 * k
+    def stroke(pts, color):
+        pts = [P(p) for p in pts]
+        d.line(pts, fill=color, width=int(w), joint="curve")
+        for x, y in (pts[0], pts[-1]) if len(pts) < 4 else pts[::3] + [pts[-1]]:
+            d.ellipse([x - w/2, y - w/2, x + w/2, y + w/2], fill=color)
+    stroke(arc_points(), "white")
+    stroke([(78, 50), (55, 50)], YELLOW)
     return img.resize((size, size), Image.LANCZOS)
 
 
