@@ -1,11 +1,18 @@
 import { useState, useRef, useEffect, useMemo } from 'react'
-import { Send, RotateCcw, Mic, RefreshCw, Square, Pencil, Check, Download, Printer, ArrowDown, ArrowRight, Copy, Lightbulb, BookOpen, Code2, Sparkles, Volume2, X, Slash } from 'lucide-react'
+import { Send, RotateCcw, Mic, RefreshCw, Square, Pencil, Check, Download, Printer, ArrowDown, ArrowRight, Copy, Lightbulb, BookOpen, Code2, Sparkles, Volume2, X, Slash, SlidersHorizontal, ImagePlus, Globe, Terminal, Wrench, Brain, ChevronDown, ExternalLink, Loader2, Braces } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import Logo from '../Logo'
 import { MarkdownRenderer, ErrorBanner, ThinkingSkeleton } from '../ui'
 import { useToast } from '../fx/Toast'
 import { useStreamingChat } from '../../hooks/useApiCall'
 import { useApp } from '../../App'
+import GenerationPanel from '../chat/GenerationPanel'
+import { Chip } from '../ui/controls'
+import { usePrefs } from '../../lib/prefs'
+import { postJson } from '../../lib/api'
+import { recordMic, toWavChunks, imageToDataUrls } from '../../lib/audio'
+import { transcribeBlob } from '../../lib/api'
+import { speakText } from '../../lib/speaker'
 
 const BASE_SYSTEM_PROMPT = "Tu es ObedGPT, un assistant IA intelligent créé par Obed Elom AGBEBAVI. Si on te demande qui t'a créé/développé, réponds que c'est Obed Elom AGBEBAVI. Réponds dans la langue de l'utilisateur. Utilise LaTeX pour les maths : $...$ inline, $$...$$ pour les blocs."
 const PERSONA_KEY = 'obedgpt-persona'
@@ -85,7 +92,23 @@ export default function ChatMode() {
   const [editValue, setEditValue] = useState('')
   const [speakingIdx, setSpeakingIdx] = useState(null)
   const [slashIdx, setSlashIdx] = useState(0)
-  const { loading, error, call, retry, clearError, abort } = useStreamingChat()
+  const [prefs] = usePrefs()
+  const [panelOpen, setPanelOpen] = useState(false)
+  const [attachments, setAttachments] = useState([])
+  const [dragOver, setDragOver] = useState(false)
+  const [transcribing, setTranscribing] = useState(false)
+  const [speakState, setSpeakState] = useState('idle')
+  const [agentBusy, setAgentBusy] = useState(false)
+  const [agentError, setAgentError] = useState(null)
+  const speakerRef = useRef(null)
+  const recorderRef = useRef(null)
+  const agentAbort = useRef(null)
+  const fileInputRef = useRef(null)
+  const { loading: streaming, error: streamError, call, retry, clearError: clearStreamError, abort: abortStream } = useStreamingChat()
+  const loading = streaming || agentBusy
+  const error = streamError || agentError
+  const clearError = () => { clearStreamError(); setAgentError(null) }
+  const abort = () => { abortStream(); agentAbort.current?.abort() }
   const bottomRef = useRef(null)
   const recognitionRef = useRef(null)
   const inputRef = useRef(null)
@@ -101,8 +124,8 @@ export default function ChatMode() {
   // Auto-save des conversations non temporaires
   useEffect(() => {
     if (!tempMode && activeChatId && messages.length > 0) {
-      const title = messages[0].content.slice(0, 50) || 'Nouvelle conversation'
-      saveConversation(activeChatId, title, messages)
+      const title = messages[0].content.slice(0, 50) || (messages[0].images?.length ? 'Analyse d\'image' : 'Nouvelle conversation')
+      saveConversation(activeChatId, title, messages.map(({ fullImages, ...m }) => m))
     }
   }, [messages, activeChatId, tempMode, saveConversation])
 
@@ -141,83 +164,116 @@ export default function ChatMode() {
 
   const copyMessage = (text) => { navigator.clipboard?.writeText(text); toast('Réponse copiée') }
 
-  // Coupe proprement dictée et lecture si le composant est démonté.
-  useEffect(() => () => { recognitionRef.current?.stop(); window.speechSynthesis?.cancel() }, [])
+  // Coupe proprement micro et lecture si le composant est démonté.
+  useEffect(() => () => { recorderRef.current?.cancel(); speakerRef.current?.stop(); window.speechSynthesis?.cancel(); agentAbort.current?.abort() }, [])
 
-  const toggleDictation = () => {
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition
-    if (!SpeechRecognition) { setFileError("La dictée vocale n'est pas supportée par ce navigateur."); return }
-    if (listening) { recognitionRef.current?.stop(); return }
-    const recognition = new SpeechRecognition()
-    recognition.lang = 'fr-FR'
-    recognition.interimResults = false
-    recognition.continuous = false
-    recognition.onresult = (e) => {
-      const transcript = Array.from(e.results).map(r => r[0].transcript).join(' ').trim()
-      if (transcript) setInput(prev => (prev ? prev + ' ' : '') + transcript)
-    }
-    recognition.onerror = () => setListening(false)
-    recognition.onend = () => setListening(false)
-    recognitionRef.current = recognition
-    recognition.start()
-    setListening(true)
+  // Dictée : enregistrement micro (arrêt automatique au silence) puis Whisper.
+  const toggleDictation = async () => {
+    if (listening) { recorderRef.current?.stop(); return }
+    if (transcribing) return
+    try {
+      const rec = await recordMic({ vad: true })
+      recorderRef.current = rec; setListening(true)
+      const { blob, heard } = await rec.done
+      setListening(false)
+      if (!heard) { toast('Aucune voix détectée'); return }
+      setTranscribing(true)
+      const { chunks } = await toWavChunks(blob, 100)
+      let text = ''
+      for (const c of chunks) { const r = await transcribeBlob(c.blob, { language: prefs.sttLanguage }); text += (text ? ' ' : '') + r.text.trim() }
+      if (text.trim()) { setInput(prev => (prev ? prev + ' ' : '') + text.trim()); setTimeout(() => inputRef.current?.focus(), 0) }
+      else toast('Rien compris, réessaie')
+    } catch (e) { setListening(false); setFileError(e.message || 'Micro indisponible.') }
+    finally { setTranscribing(false); recorderRef.current = null }
   }
 
-  // Lecture à voix haute d'une réponse (synthèse vocale du navigateur).
+  // Lecture à voix haute d'une réponse : Groq Orpheus ou navigateur.
   const toggleSpeak = (i, text) => {
-    const synth = window.speechSynthesis
-    if (!synth) { setFileError("La synthèse vocale n'est pas supportée par ce navigateur."); return }
-    if (speakingIdx === i) { synth.cancel(); setSpeakingIdx(null); return }
-    synth.cancel()
-    const utt = new SpeechSynthesisUtterance(toSpeakable(text))
-    const fr = synth.getVoices().find(v => v.lang.startsWith('fr'))
-    if (fr) utt.voice = fr
-    utt.lang = fr?.lang || 'fr-FR'
-    utt.onend = () => setSpeakingIdx(null)
-    utt.onerror = () => setSpeakingIdx(null)
-    setSpeakingIdx(i)
-    synth.speak(utt)
+    if (speakingIdx === i) { speakerRef.current?.stop(); setSpeakingIdx(null); setSpeakState('idle'); return }
+    speakerRef.current?.stop()
+    setSpeakingIdx(i); setSpeakState('loading')
+    speakerRef.current = speakText(text, prefs, (st, msg) => {
+      if (st === 'end') { setSpeakingIdx(cur => (cur === i ? null : cur)); setSpeakState('idle') }
+      else if (st === 'fallback') toast('Voix Groq indisponible, voix du navigateur utilisée')
+      else setSpeakState(st)
+    })
   }
 
-  // Ajoute un message assistant vide puis le remplit au fil du streaming.
-  // On mesure la durée de génération pour l'afficher sous la réponse.
+  // Images : sélection, collage, glisser-déposer (compressées avant envoi).
+  const addImages = async files => {
+    const imgs = [...files].filter(f => f.type.startsWith('image/'))
+    if (!imgs.length) return
+    try {
+      const room = 4 - attachments.length
+      const done = await Promise.all(imgs.slice(0, Math.max(0, room)).map(f => imageToDataUrls(f)))
+      setAttachments(a => [...a, ...done])
+      if (imgs.length > room) toast('4 images maximum par message')
+    } catch (e) { setFileError(e.message) }
+  }
+  const onPaste = e => { const f = [...(e.clipboardData?.files || [])]; if (f.some(x => x.type.startsWith('image/'))) { e.preventDefault(); addImages(f) } }
+  const onDrop = e => { e.preventDefault(); setDragOver(false); addImages(e.dataTransfer.files) }
+
+  // Ajoute un message assistant vide puis le remplit au fil du flux
+  // (texte, raisonnement, sources, utilisation). Mesure la durée de génération.
+  const patchLast = fn => setMessages(prev => { const next = [...prev]; next[next.length - 1] = fn(next[next.length - 1]); return next })
   const appendAssistantStreamed = async (apiCallFn) => {
     const t0 = Date.now()
     setMessages(prev => [...prev, { role: 'assistant', content: '' }])
-    const onChunk = (delta) => {
-      setMessages(prev => {
-        const next = [...prev]
-        const last = next[next.length - 1]
-        next[next.length - 1] = { ...last, content: last.content + delta }
-        return next
-      })
+    const handlers = {
+      onChunk: d => patchLast(m => ({ ...m, content: m.content + d })),
+      onReasoning: d => patchLast(m => ({ ...m, reasoning: (m.reasoning || '') + d })),
+      onMeta: v => patchLast(m => ({ ...m, model: v.model, features: v.features })),
+      onTools: v => patchLast(m => ({ ...m, tools: v })),
+      onUsage: v => patchLast(m => ({ ...m, usage: v })),
     }
-    const data = await apiCallFn(onChunk)
+    const data = await apiCallFn(handlers)
     if (!data) setMessages(prev => prev.slice(0, -1))
     else if (!data.aborted) {
-      const ms = Date.now() - t0
-      setMessages(prev => { const next = [...prev]; next[next.length - 1] = { ...next[next.length - 1], ms }; return next })
+      patchLast(m => ({ ...m, ms: Date.now() - t0 }))
+      if (prefs.autoSpeak && data.text) setTimeout(() => toggleSpeak(-1, data.text), 50)
     }
     return data
   }
 
+  // Seule la dernière image envoyée repart au modèle (limite de 5 images et de poids).
+  const toApiMessages = list => {
+    const lastImg = list.map(m => !!m.fullImages?.length).lastIndexOf(true)
+    return list.slice(-MAX_CONTEXT_MESSAGES).map((m, idx, arr) => {
+      const abs = list.length - arr.length + idx
+      if (abs === lastImg) return { role: m.role, content: [{ type: 'text', text: m.content || 'Analyse cette image.' }, ...m.fullImages.map(u => ({ type: 'image_url', image_url: { url: u } }))] }
+      return { role: m.role, content: m.content + (m.images?.length && abs !== lastImg ? '\n[image jointe précédemment]' : '') }
+    })
+  }
+  const genOptions = () => ({ model: prefs.model === 'auto' ? undefined : prefs.model, reasoning: prefs.reasoning === 'off' ? undefined : prefs.reasoning, temperature: prefs.temperature, maxTokens: prefs.maxTokens, webSearch: prefs.webSearch, codeExec: prefs.codeExec, json: prefs.jsonMode })
+
+  const runAgent = async list => {
+    const t0 = Date.now(); const ac = new AbortController(); agentAbort.current = ac
+    setAgentBusy(true); setAgentError(null)
+    try {
+      const data = await postJson('/api/agent', { messages: toApiMessages(list), systemPrompt, model: genOptions().model, temperature: prefs.temperature, maxTokens: prefs.maxTokens, mcpServers: prefs.mcpServers.filter(s => s.url) }, ac.signal)
+      setMessages(prev => [...prev, { role: 'assistant', content: data.text, steps: data.steps, model: data.model, ms: Date.now() - t0 }])
+      if (prefs.autoSpeak && data.text) setTimeout(() => toggleSpeak(-1, data.text), 50)
+    } catch (e) { if (e.name !== 'AbortError') setAgentError(e.message) }
+    finally { setAgentBusy(false) }
+  }
+
   const sendFromMessages = async (newMessages) => {
-    // L'API ne reçoit que role + content (pas les champs internes comme `ms`).
-    const contextWindow = newMessages.slice(-MAX_CONTEXT_MESSAGES).map(({ role, content }) => ({ role, content }))
-    await appendAssistantStreamed(onChunk => call('/api/chat', { messages: contextWindow, systemPrompt }, onChunk))
+    if (prefs.agent) return runAgent(newMessages)
+    await appendAssistantStreamed(h => call('/api/chat', { messages: toApiMessages(newMessages), systemPrompt, ...genOptions() }, h))
   }
 
   const send = async () => {
-    const text = input.trim()
+    const text = input.trim() || (attachments.length ? 'Analyse cette image.' : '')
     if (!text || loading) return
-    window.speechSynthesis?.cancel(); setSpeakingIdx(null)
-    const newMessages = [...messages, { role: 'user', content: text }]
+    speakerRef.current?.stop(); setSpeakingIdx(null)
+    const imgs = attachments
+    const newMessages = [...messages, { role: 'user', content: text, ...(imgs.length ? { images: imgs.map(a => a.thumb), fullImages: imgs.map(a => a.full) } : {}) }]
     setMessages(newMessages)
-    setInput('')
+    setInput(''); setAttachments([])
     await sendFromMessages(newMessages)
   }
 
-  const handleRetry = async () => { await appendAssistantStreamed(onChunk => retry(onChunk)) }
+  const handleRetry = async () => { if (prefs.agent) { clearError(); return runAgent(messages) } await appendAssistantStreamed(h => retry(h)) }
 
   const regenerate = async () => {
     if (loading) return
@@ -281,7 +337,7 @@ export default function ChatMode() {
     }
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send() }
   }
-  const reset = () => { window.speechSynthesis?.cancel(); setSpeakingIdx(null); setMessages([]); clearError(); setFileError(null); cancelEdit() }
+  const reset = () => { speakerRef.current?.stop(); window.speechSynthesis?.cancel(); setSpeakingIdx(null); setMessages([]); setAttachments([]); clearError(); setFileError(null); cancelEdit() }
 
   const lastIsAssistant = messages.length > 0 && messages[messages.length - 1].role === 'assistant' && !loading
   const fmtMs = ms => ms < 1000 ? `${ms} ms` : `${(ms / 1000).toFixed(1).replace('.', ',')} s`
@@ -339,9 +395,36 @@ export default function ChatMode() {
                     </div>
                   ) : (
                     <div className={isUser ? 'message-user' : streamingThis ? 'streaming' : ''}>
+                      {isUser && msg.images?.length > 0 && <div className="msg-images">{msg.images.map((u, k) => <img key={k} src={u} alt={`Image jointe ${k + 1}`} />)}</div>}
                       {isUser
                         ? <p className="text-[.95rem] break-words whitespace-pre-wrap">{msg.content}</p>
-                        : (msg.content ? <MarkdownRenderer content={msg.content} /> : <ThinkingSkeleton />)}
+                        : <>
+                            {msg.steps?.length > 0 && (
+                              <div className="steps" aria-label="Outils utilisés">
+                                {msg.steps.map((st, k) => <div key={k} className="step"><Wrench size={12} className="flex-shrink-0 translate-y-[1px]" /><b>{st.name}</b><span>{JSON.stringify(st.args)} → {typeof st.result === 'string' ? st.result : JSON.stringify(st.result)}</span></div>)}
+                              </div>
+                            )}
+                            {msg.reasoning && (
+                              <details className="reasoning" open={streamingThis && !msg.content}>
+                                <summary><Brain size={14} /> {streamingThis && !msg.content ? 'Réflexion en cours…' : 'Raisonnement'}<ChevronDown size={14} className="chev" /></summary>
+                                <div className="r-body">{msg.reasoning}</div>
+                              </details>
+                            )}
+                            {msg.content ? <MarkdownRenderer content={msg.content} /> : (!msg.reasoning && <ThinkingSkeleton />)}
+                            {msg.tools?.filter(t => t.code).map((t, k) => (
+                              <details key={k} className="reasoning mt-3"><summary><Terminal size={14} /> Code exécuté<ChevronDown size={14} className="chev" /></summary>
+                                <div className="px-3 pb-3 pt-2 border-t" style={{ borderColor: 'var(--border)' }}><MarkdownRenderer content={'```python\n' + t.code + '\n```' + (t.output ? '\n```text\n' + t.output + '\n```' : '')} /></div>
+                              </details>
+                            ))}
+                            {msg.tools?.some(t => t.results?.length) && (
+                              <div className="sources" aria-label="Sources web">
+                                {[...new Map(msg.tools.flatMap(t => t.results || []).map(r => [r.url, r])).values()].slice(0, 8).map(r => {
+                                  let host = r.url; try { host = new URL(r.url).hostname.replace(/^www\./, '') } catch {}
+                                  return <a key={r.url} className="source" href={r.url} target="_blank" rel="noopener noreferrer" title={r.title}><Globe size={12} /><span>{host}</span><ExternalLink size={10} /></a>
+                                })}
+                              </div>
+                            )}
+                          </>}
                     </div>
                   )}
                   {!isEditing && isUser && (
@@ -353,10 +436,12 @@ export default function ChatMode() {
                     <div className="flex items-center gap-0.5 mt-1.5 -ml-2 flex-wrap">
                       <button onClick={() => copyMessage(msg.content)} aria-label="Copier cette réponse" className="mini-action"><Copy size={12} /> Copier</button>
                       <button onClick={() => toggleSpeak(i, msg.content)} aria-label={speakingIdx === i ? 'Arrêter la lecture' : 'Lire à voix haute'} aria-pressed={speakingIdx === i} className="mini-action">
-                        {speakingIdx === i ? <Square size={11} fill="currentColor" /> : <Volume2 size={12} />} {speakingIdx === i ? 'Arrêter' : 'Écouter'}
+                        {speakingIdx === i ? (speakState === 'loading' ? <Loader2 size={12} className="animate-spin" /> : <Square size={11} fill="currentColor" />) : <Volume2 size={12} />} {speakingIdx === i ? 'Arrêter' : 'Écouter'}
                       </button>
                       {isLast && lastIsAssistant && <button onClick={regenerate} aria-label="Régénérer cette réponse" className="mini-action"><RefreshCw size={12} /> Régénérer</button>}
                       {msg.ms != null && <span className="meta-time" title="Durée de génération">{fmtMs(msg.ms)}</span>}
+                      {msg.model && <span className="meta-time hidden sm:inline" title="Modèle utilisé">{msg.model.split('/').pop()}</span>}
+                      {msg.usage?.total && <span className="meta-time hidden sm:inline" title="Tokens utilisés">{msg.usage.total} tok</span>}
                     </div>
                   )}
                 </div>
@@ -383,8 +468,25 @@ export default function ChatMode() {
           <div className="chat-col pb-2"><p className="text-xs text-danger flex items-center justify-between">{fileError}
             <button onClick={() => setFileError(null)} aria-label="Fermer ce message" className="text-ink3 hover:text-ink ml-2"><X size={12} /></button></p></div>
         )}
-        <div className={`composer ${loading ? 'busy' : ''}`}>
+        <div className={`composer relative ${loading ? 'busy' : ''}`} onDragOver={e => { if (e.dataTransfer.types.includes('Files')) { e.preventDefault(); setDragOver(true) } }} onDragLeave={() => setDragOver(false)} onDrop={onDrop}>
           <span className="progress" />
+          {dragOver && <div className="drop-hint">Dépose tes images ici</div>}
+          <AnimatePresence>{panelOpen && <GenerationPanel onClose={() => setPanelOpen(false)} />}</AnimatePresence>
+          {attachments.length > 0 && (
+            <div className="attach-strip">
+              {attachments.map((a, k) => <div key={k} className="attach"><img src={a.thumb} alt={`Image ${k + 1}`} /><button onClick={() => setAttachments(list => list.filter((_, j) => j !== k))} aria-label="Retirer l'image">×</button></div>)}
+            </div>
+          )}
+          {(prefs.webSearch || prefs.codeExec || prefs.agent || prefs.jsonMode || prefs.reasoning !== 'off' || prefs.model !== 'auto') && (
+            <div className="flex flex-wrap gap-1.5 px-3 pt-2.5">
+              {prefs.model !== 'auto' && <Chip>{prefs.model.split('/').pop()}</Chip>}
+              {prefs.webSearch && <Chip tone="accent"><Globe size={11} /> Web</Chip>}
+              {prefs.codeExec && <Chip tone="accent"><Terminal size={11} /> Code</Chip>}
+              {prefs.agent && <Chip tone="signal"><Wrench size={11} /> Agent</Chip>}
+              {prefs.jsonMode && <Chip><Braces size={11} /> JSON</Chip>}
+              {prefs.reasoning !== 'off' && <Chip><Brain size={11} /> {prefs.reasoning}</Chip>}
+            </div>
+          )}
           <AnimatePresence>
             {slashMatches.length > 0 && (
               <motion.div className="slash-menu" role="listbox" aria-label="Commandes rapides" initial={{ opacity: 0, y: 8, scale: 0.98 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 6 }} transition={{ duration: 0.15 }}>
@@ -398,14 +500,17 @@ export default function ChatMode() {
           </AnimatePresence>
           <div className="relative">
             <RotatingPlaceholder hidden={!!input || loading} />
-            <textarea ref={inputRef} value={input} onChange={e => setInput(e.target.value)} onKeyDown={onKeyDown} rows={1} disabled={loading} aria-label="Message à envoyer"
+            <textarea ref={inputRef} value={input} onChange={e => setInput(e.target.value)} onKeyDown={onKeyDown} onPaste={onPaste} rows={1} disabled={loading} aria-label="Message à envoyer"
               style={{ minHeight: '46px', maxHeight: '170px' }} />
           </div>
           <div className="flex items-center gap-0.5 px-0.5 pt-0.5">
-            <button onClick={toggleDictation} title={listening ? 'Arrêter la dictée' : 'Dicter un message'} aria-label={listening ? 'Arrêter la dictée vocale' : 'Démarrer la dictée vocale'} aria-pressed={listening}
+            <button onClick={toggleDictation} title={listening ? 'Arrêter la dictée' : 'Dicter (Whisper)'} aria-label={listening ? 'Arrêter la dictée vocale' : 'Démarrer la dictée vocale'} aria-pressed={listening}
               className="icon-btn" style={listening ? { color: 'var(--danger)', background: 'var(--surface-2)' } : undefined}>
-              {listening ? <span className="mic-wave" aria-hidden="true"><i /><i /><i /><i /></span> : <Mic size={17} />}
+              {transcribing ? <Loader2 size={16} className="animate-spin" /> : listening ? <span className="mic-wave" aria-hidden="true"><i /><i /><i /><i /></span> : <Mic size={17} />}
             </button>
+            <input ref={fileInputRef} type="file" accept="image/*" multiple hidden onChange={e => { addImages(e.target.files); e.target.value = '' }} />
+            <button onClick={() => fileInputRef.current?.click()} title="Joindre une image (vision)" aria-label="Joindre une image" className="icon-btn"><ImagePlus size={17} /></button>
+            <button onClick={() => setPanelOpen(o => !o)} title="Réglages Groq : modèle, web, code, agent" aria-label="Ouvrir les réglages Groq" aria-expanded={panelOpen} className="icon-btn" style={panelOpen || prefs.webSearch || prefs.codeExec || prefs.agent ? { color: 'var(--accent)' } : undefined}><SlidersHorizontal size={16} /></button>
             <button onClick={() => { setInput('/'); inputRef.current?.focus() }} title="Commandes rapides" aria-label="Ouvrir les commandes rapides" className="icon-btn hidden sm:inline-grid"><Slash size={16} /></button>
             {messages.length > 0 && (
               <>
@@ -419,7 +524,7 @@ export default function ChatMode() {
               {loading ? (
                 <motion.button key="stop" onClick={abort} aria-label="Arrêter la génération" title="Arrêter" className="send-btn btn-primary" initial={{ scale: 0.6, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.6, opacity: 0 }} transition={spring}><Square size={13} fill="currentColor" /></motion.button>
               ) : (
-                <motion.button key="send" onClick={send} disabled={!input.trim()} aria-label="Envoyer le message" className="send-btn btn-primary" initial={{ scale: 0.6, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.6, opacity: 0 }} whileTap={{ scale: 0.88 }} transition={spring}><Send size={16} /></motion.button>
+                <motion.button key="send" onClick={send} disabled={!input.trim() && !attachments.length} aria-label="Envoyer le message" className="send-btn btn-primary" initial={{ scale: 0.6, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.6, opacity: 0 }} whileTap={{ scale: 0.88 }} transition={spring}><Send size={16} /></motion.button>
               )}
             </AnimatePresence>
           </div>

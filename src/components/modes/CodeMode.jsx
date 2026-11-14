@@ -1,9 +1,10 @@
 import { useState, useMemo } from 'react'
-import { Code2, Send, Terminal, Download, Eye, EyeOff, Wand2, MessageCircleQuestion, Copy, ArrowRight } from 'lucide-react'
+import { Code2, Send, Terminal, Download, Eye, EyeOff, Wand2, MessageCircleQuestion, Copy, ArrowRight, Play, Loader2 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { LoadingDots, MarkdownRenderer, ErrorBanner, EmptyState } from '../ui'
 import { useToast } from '../fx/Toast'
 import { useApiCall } from '../../hooks/useApiCall'
+import { postJson } from '../../lib/api'
 
 const LANGUAGES = ['JavaScript', 'TypeScript', 'Python', 'Java', 'PHP', 'React JSX', 'HTML/CSS', 'SQL', 'Bash', 'C#', 'Flutter/Dart', 'Kotlin']
 const EXAMPLES = [
@@ -30,11 +31,13 @@ export default function CodeMode() {
   const [showPreview, setShowPreview] = useState(false)
   const { loading, error, call, retry, clearError } = useApiCall()
   const toast = useToast()
+  const [run, setRun] = useState({ busy: false, out: null, err: null })
 
   const generate = async () => {
     if (!prompt.trim() || loading) return
     setResult(null)
     setShowPreview(false)
+    setRun({ busy: false, out: null, err: null })
     const body = mode === 'explain' ? { prompt, mode: 'explain' } : { prompt, language, context }
     const data = await call('/api/code', body)
     if (data) setResult(data.text)
@@ -48,6 +51,16 @@ export default function CodeMode() {
     const code = extractFirstCodeBlock(result)
     return /<html[\s>]/i.test(code) ? code : `<!DOCTYPE html><html><head><meta charset="utf-8"></head><body>${code}</body></html>`
   }, [canPreview, result])
+
+  // Exécution Python côté Groq (Compound + code_interpreter)
+  const canRun = mode === 'generate' && language === 'Python' && !!result
+  const runCode = async () => {
+    setRun({ busy: true, out: null, err: null })
+    try {
+      const d = await postJson('/api/tools', { tool: 'run_code', text: 'Exécute exactement ce code Python avec code_interpreter et montre sa sortie réelle :\n```python\n' + extractFirstCodeBlock(result) + '\n```' })
+      setRun({ busy: false, out: d, err: null })
+    } catch (e) { setRun({ busy: false, out: null, err: e.message }) }
+  }
 
   const downloadCode = () => {
     const code = extractFirstCodeBlock(result)
@@ -153,6 +166,11 @@ export default function CodeMode() {
                   </button>
                 )}
                 <button onClick={() => { navigator.clipboard?.writeText(mode === 'explain' ? result : extractFirstCodeBlock(result)); toast(mode === 'explain' ? 'Explication copiée' : 'Code copié') }} aria-label="Copier" title="Copier" className="icon-btn !w-8 !h-8"><Copy size={15} /></button>
+                {canRun && (
+                  <button onClick={runCode} disabled={run.busy} aria-label="Exécuter le code Python" title="Exécuter (Python, côté Groq)" className="icon-btn !w-8 !h-8">
+                    {run.busy ? <Loader2 size={15} className="animate-spin" /> : <Play size={15} />}
+                  </button>
+                )}
                 {mode === 'generate' && (
                   <button onClick={downloadCode} aria-label="Télécharger le code" title="Télécharger" className="icon-btn !w-8 !h-8"><Download size={15} /></button>
                 )}
@@ -162,13 +180,19 @@ export default function CodeMode() {
               <iframe title="Aperçu HTML" sandbox="allow-scripts" srcDoc={previewDoc} className="w-full h-72 rounded-xl bg-white mb-3" style={{ border: '1px solid var(--border-strong)' }} />
             )}
             <MarkdownRenderer content={result} />
+            {(run.out || run.err) && (
+              <div className="mt-4 pt-3 space-y-2" style={{ borderTop: '1px solid var(--border)' }}>
+                <span className="field-label !mb-0">Résultat de l'exécution</span>
+                {run.err ? <p className="text-sm text-danger">{run.err}</p> : <MarkdownRenderer content={run.out.tools?.find(t => t.output)?.output ? '```text\n' + run.out.tools.find(t => t.output).output + '\n```' : run.out.text} />}
+              </div>
+            )}
           </motion.div>
         )}
         {!result && !loading && (
           <EmptyState icon={Code2} title={mode === 'explain' ? 'Colle du code pour le comprendre' : 'Rien de généré pour le moment'}
             description={mode === 'explain'
               ? "L'IA explique le fonctionnement étape par étape et signale les pièges."
-              : 'Le code est généré par gpt-oss-120b (Groq), avec commentaires.'} />
+              : "Le code est généré par Groq, avec commentaires. Le Python s'exécute d'un clic."} />
         )}
       </div>
     </div>

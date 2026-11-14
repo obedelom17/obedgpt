@@ -14,13 +14,17 @@ import { ToastProvider } from './components/fx/Toast'
 // télécharger tout le JS (code, tts, settings) d'un coup
 // alors qu'on n'utilisera peut-être que le chat.
 const CodeMode   = lazy(() => import('./components/modes/CodeMode'))
-const TTSMode    = lazy(() => import('./components/modes/TTSMode'))
+const VoiceMode  = lazy(() => import('./components/modes/VoiceMode'))
+const AtelierMode = lazy(() => import('./components/modes/AtelierMode'))
+const StudioMode = lazy(() => import('./components/modes/StudioMode'))
 const Settings   = lazy(() => import('./components/Settings'))
 
 const MODES = {
   chat:     { label: 'Chat',            component: ChatMode },
   code:     { label: 'Code',            component: CodeMode },
-  tts:      { label: 'Text-to-Speech',  component: TTSMode },
+  tts:      { label: 'Voix',            component: VoiceMode },
+  atelier:  { label: 'Atelier',         component: AtelierMode },
+  studio:   { label: 'Studio Groq',     component: StudioMode },
   settings: { label: 'Paramètres',      component: Settings },
 }
 

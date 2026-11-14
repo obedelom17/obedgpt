@@ -2,9 +2,15 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { Menu, Plus, Search } from 'lucide-react'
 import { useApp } from '../../App'
 import ThemeToggle from '../fx/ThemeToggle'
+import { usePrefs } from '../../lib/prefs'
+import { useQuota } from '../../lib/quota'
 
 export default function Header({ mode }) {
   const { setSidebarOpen, startNewChat, busy, openPalette } = useApp()
+  const [prefs] = usePrefs()
+  const q = useQuota()
+  const label = prefs.webSearch || prefs.codeExec ? 'Groq · Compound' : prefs.model === 'auto' ? 'Groq · gpt-oss-120b' : `Groq · ${prefs.model.split('/').pop()}`
+  const low = q?.tokLimit && q.tokRemaining / q.tokLimit < 0.15
   return (
     <header className="top-bar">
       <button onClick={() => setSidebarOpen(true)} className="icon-btn md:hidden" aria-label="Ouvrir le menu"><Menu size={18} /></button>
@@ -16,7 +22,7 @@ export default function Header({ mode }) {
         </AnimatePresence>
         <span className="model-chip hidden sm:inline-flex" title="Modèle propulsé par Groq">
           <span className={`live-dot ${busy ? 'busy' : ''}`} />
-          {busy ? 'Génération…' : 'Groq · gpt-oss-120b'}
+          {busy ? 'Génération…' : label}{!busy && q?.reqRemaining != null && <span className={`font-mono text-[11px] ${low ? 'text-warn' : 'text-ink3'}`}> · {q.reqRemaining} req</span>}
         </span>
       </div>
       <button onClick={openPalette} className="search-btn hidden sm:inline-flex" aria-label="Ouvrir la recherche de commandes">

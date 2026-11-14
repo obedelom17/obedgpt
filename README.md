@@ -58,3 +58,18 @@ Variables à définir dans Vercel (Settings → Environment Variables) :
 - Logo : bulle de dialogue en « O » avec un point jaune (`src/components/Logo.jsx`, `public/favicon.svg`). Les icônes PWA se régénèrent avec `python3 scripts/generate_icons.py`.
 - Polices : Bricolage Grotesque (titres), Instrument Sans (texte), JetBrains Mono (code).
 - Les couleurs vivent dans `src/index.css` (variables CSS) : vert `#0e7a5c` et jaune `#f2b008` par défaut.
+
+
+## Fonctionnalités Groq (clé gratuite)
+
+Une seule variable : `GROQ_API_KEYS`. Aucune autre clé n'est nécessaire.
+
+| Page | Ce que ça utilise |
+|---|---|
+| **Chat** | Choix du modèle (liste en direct), raisonnement (gpt-oss, qwen3) affiché, **vision** (images collées, déposées ou jointes), **recherche web** et **exécution de code** via Compound, mode JSON, agent à outils, dictée Whisper, lecture Orpheus |
+| **Voix** | **Transcrire** (Whisper large-v3 / turbo, traduction vers l'anglais, horodatage, export TXT / SRT / VTT / JSON, longs fichiers découpés), **Parler** (Orpheus anglais et arabe, directions vocales, export WAV), **Conversation** mains libres |
+| **Atelier** | Traduire, résumer, reformuler, corriger, e-mail, extraction **JSON**, quiz et cartes, analyse d'image (OCR, tableaux), **modération** (gpt-oss-safeguard), **anti-injection** (Prompt Guard), exécution Python |
+| **Studio Groq** | Catalogue de modèles, API **Batch** (200 prompts), agent avec **function calling** et serveurs **MCP**, quotas en direct |
+| **Code** | Génération, explication, exécution Python |
+
+Limites à connaître : Groq ne génère ni images ni embeddings ; Orpheus lit l'anglais et l'arabe (le français passe par la voix du navigateur) ; certains modèles (Orpheus) demandent d'accepter leurs conditions une fois dans la console Groq ; l'API Batch peut nécessiter un compte avec facturation.

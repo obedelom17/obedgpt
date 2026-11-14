@@ -9,7 +9,7 @@ const SLIDERS = [
   { label: 'Volume',   key: 'volume', min: 0,   max: 1, step: 0.05 },
 ]
 
-export default function TTSMode() {
+export default function TTSMode({ embedded = false }) {
   const [text, setText] = useState('')
   const [aiPrompt, setAiPrompt] = useState('')
   const [voices, setVoices] = useState([])
@@ -98,12 +98,12 @@ export default function TTSMode() {
   }
 
   return (
-    <div className="page">
-      <div className="page-inner space-y-5">
-        <div>
+    <div className={embedded ? '' : 'page'}>
+      <div className={embedded ? 'space-y-5' : 'page-inner space-y-5'}>
+        {!embedded && <div>
           <h2 className="page-title">Text-to-Speech</h2>
           <p className="page-sub">Écris un texte, ou demande à l'IA d'en écrire un, puis écoute-le avec la voix de ton choix.</p>
-        </div>
+        </div>}
 
         <div className="card p-4 space-y-3">
           <label htmlFor="tts-ai" className="field-label !mb-0">Générer un texte avec l'IA</label>

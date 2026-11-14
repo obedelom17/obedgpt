@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Search, MessageSquare, Code2, Volume2, Settings as SettingsIcon, Plus, Sun, Moon, Flame, MessagesSquare, CornerDownLeft, PanelLeft, Palette } from 'lucide-react'
+import { Search, MessageSquare, Code2, Volume2, Wand2, Cpu, Settings as SettingsIcon, Plus, Sun, Moon, Flame, MessagesSquare, CornerDownLeft, PanelLeft, Palette } from 'lucide-react'
 import { useApp } from '../../App'
 import { useTheme, ACCENTS } from '../../hooks/useTheme.jsx'
 
@@ -22,7 +22,9 @@ export default function CommandPalette({ open, onClose }) {
       ...ACCENTS.map(a => ({ id: 'acc-' + a.id, group: 'Apparence', label: `Accent ${a.label.toLowerCase()}`, icon: Palette, run: () => setAccent(a.id) })),
       { id: 'chat', group: 'Navigation', label: 'Chat', icon: MessageSquare, run: () => setActiveMode('chat') },
       { id: 'code', group: 'Navigation', label: 'Code', icon: Code2, run: () => setActiveMode('code') },
-      { id: 'tts', group: 'Navigation', label: 'Text-to-Speech', icon: Volume2, run: () => setActiveMode('tts') },
+      { id: 'tts', group: 'Navigation', label: 'Voix : transcrire, parler', icon: Volume2, run: () => setActiveMode('tts') },
+      { id: 'atelier', group: 'Navigation', label: 'Atelier : traduire, résumer, quiz, image', icon: Wand2, run: () => setActiveMode('atelier') },
+      { id: 'studio', group: 'Navigation', label: 'Studio Groq : modèles, lots, MCP, quota', icon: Cpu, run: () => setActiveMode('studio') },
       { id: 'settings', group: 'Navigation', label: 'Paramètres', icon: SettingsIcon, run: () => setActiveMode('settings') },
     ]
     const convs = history.slice(0, 30).map(c => ({ id: 'c' + c.id, group: 'Conversations', label: c.title || 'Sans titre', icon: MessagesSquare, run: () => openConversation(c.id) }))

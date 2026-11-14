@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Plus, MessageSquare, Code2, Volume2, Settings as SettingsIcon, Trash2, Pencil, Star, Search, X, PanelLeftClose, PanelLeftOpen, Flame, Check } from 'lucide-react'
+import { Plus, MessageSquare, Code2, Volume2, Wand2, Cpu, Settings as SettingsIcon, Trash2, Pencil, Star, Search, X, PanelLeftClose, PanelLeftOpen, Flame, Check } from 'lucide-react'
 import { useApp } from '../../App'
 import { useMedia } from '../../hooks/useMedia'
 import Logo from '../Logo'
@@ -8,7 +8,9 @@ import Logo from '../Logo'
 const NAV_ITEMS = [
   { key: 'chat', label: 'Chat', icon: MessageSquare },
   { key: 'code', label: 'Code', icon: Code2 },
-  { key: 'tts',  label: 'Text-to-Speech', icon: Volume2 },
+  { key: 'tts',  label: 'Voix', icon: Volume2 },
+  { key: 'atelier', label: 'Atelier', icon: Wand2 },
+  { key: 'studio', label: 'Studio Groq', icon: Cpu },
 ]
 const spring = { type: 'spring', stiffness: 380, damping: 34 }
 
