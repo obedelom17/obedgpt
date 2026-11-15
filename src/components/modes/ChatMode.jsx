@@ -223,10 +223,10 @@ export default function ChatMode() {
     const imgs = [...files].filter(f => f.type.startsWith('image/'))
     if (!imgs.length) return
     try {
-      const room = 4 - attachments.length
+      const room = 3 - attachments.length
       const done = await Promise.all(imgs.slice(0, Math.max(0, room)).map(f => imageToDataUrls(f)))
       setAttachments(a => [...a, ...done])
-      if (imgs.length > room) toast('4 images maximum par message')
+      if (imgs.length > room) toast('3 images maximum par message')
     } catch (e) { setFileError(e.message) }
   }
   const onPaste = e => { const f = [...(e.clipboardData?.files || [])]; if (f.some(x => x.type.startsWith('image/'))) { e.preventDefault(); addImages(f) } }

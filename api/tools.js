@@ -13,7 +13,7 @@ const J = 'Réponds UNIQUEMENT avec un objet JSON valide, sans texte autour ni b
 function plan(tool, b, cache) {
   const text = lim(b.text), o = b.options || {}
   switch (tool) {
-    case 'keywords': return { sys: `Extrais de la question 6 à 12 mots-clés de recherche : noms, termes techniques, synonymes et variantes proches, dans la langue de la question (et en anglais si pertinent). Schéma : {"keywords":[string]}. ${J}`, user: text.slice(0, 2000), json: true, model: cache.list.find(m => m.id === 'llama-3.1-8b-instant')?.id }
+    case 'keywords': return { sys: `Extrais de la question 6 à 12 mots-clés de recherche : noms, termes techniques, synonymes et variantes proches, dans la langue de la question (et en anglais si pertinent). Schéma : {"keywords":[string]}. ${J}`, user: text.slice(0, 2000), json: true, model: cache.list.find(m => m.id === 'openai/gpt-oss-20b')?.id }
     case 'translate': return { sys: `Tu es traducteur professionnel. Traduis fidèlement vers ${LANGS[o.target] || 'anglais'}. Conserve le ton, la mise en forme et les noms propres. Réponds uniquement avec la traduction.`, user: text }
     case 'summarize': return { sys: `Tu résumes des textes. Format : ${o.style === 'bullets' ? 'liste à puces' : o.style === 'tldr' ? 'une seule phrase (TL;DR)' : 'paragraphes courts'}. Longueur : ${o.length === 'long' ? 'détaillée' : o.length === 'short' ? 'très courte' : 'moyenne'}. Langue : celle du texte. Ne rajoute aucune information.`, user: text }
     case 'rewrite': return { sys: `Reformule le texte avec un ton ${o.tone || 'professionnel'}. Garde le sens, la langue et les faits. Réponds uniquement avec le texte reformulé.`, user: text }
@@ -23,7 +23,7 @@ function plan(tool, b, cache) {
     case 'quiz': return { sys: `Crée un quiz de ${clamp(o.count, 3, 15, 6)} questions de niveau ${o.level || 'intermédiaire'} à partir du contenu fourni (ou du sujet). Langue : celle du contenu. Schéma : {"title":string,"cards":[{"q":string,"choices":[string,string,string,string],"answer":number (index 0-3),"explanation":string}]}. ${J}`, user: text, json: true }
     case 'moderate': return { sys: `Tu es un modérateur de contenu. Politique :\n${lim(o.policy || DEFAULT_POLICY, 3000)}\nÉvalue le contenu de l'utilisateur. Schéma : {"violation":0|1,"category":string,"confidence":"low"|"medium"|"high","rationale":string}. ${J}`, user: text, json: true, model: cache.list.find(m => m.kind === 'guard' && /safeguard/i.test(m.id))?.id }
     case 'injection': return { raw: true, model: cache.list.find(m => /prompt-guard/i.test(m.id))?.id || 'meta-llama/llama-prompt-guard-2-86m', user: lim(text, 2000) }
-    case 'run_code': return { sys: "Tu résous la tâche en exécutant du code Python avec l'outil code_interpreter, puis tu expliques le résultat brièvement. Montre le code utile dans un bloc ```python.", user: text, model: 'groq/compound-mini', compound: ['code_interpreter'] }
+    case 'run_code': return { sys: "Tu résous la tâche en exécutant du code Python avec l'outil code_interpreter, puis tu expliques le résultat brièvement. Montre le code utile dans un bloc ```python.", user: text, model: 'groq/compound', compound: ['code_interpreter'] }
     default: return null
   }
 }

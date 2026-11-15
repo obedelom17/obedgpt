@@ -21,7 +21,7 @@ function buildPlan(body, cache) {
   if (images > 0) {
     model = pickVision(cache); features.push('vision')
   } else if (wantTools) {
-    model = body.fast ? 'groq/compound-mini' : 'groq/compound'
+    model = 'groq/compound'
     const enabled = []
     if (body.webSearch) { enabled.push('web_search', 'visit_website'); features.push('web') }
     if (body.codeExec) { enabled.push('code_interpreter'); features.push('code') }
@@ -41,6 +41,8 @@ function buildPlan(body, cache) {
 const EXTRAS = ['reasoning_effort', 'include_reasoning', 'reasoning_format', 'compound_custom', 'response_format']
 const strip = p => { const n = { ...p }; EXTRAS.forEach(k => delete n[k]); return n }
 
+const hasImages = p => p.messages.some(m => Array.isArray(m.content) && m.content.some(c => c.type === 'image_url'))
+
 async function open(payload, signal) {
   let p = payload
   for (let attempt = 0; attempt < 3; attempt++) {
@@ -48,7 +50,7 @@ async function open(payload, signal) {
     if (res?.ok) return { up: res, payload: p }
     const err = await readError(res)
     if (res?.status === 400 && attempt === 0 && EXTRAS.some(k => k in p)) { p = strip(p); continue }
-    if ([400, 404].includes(res?.status) && /decommission|not found|does not exist|no longer supported/i.test(err.message) && p.model !== DEFAULT_MODEL) { p = { ...strip(p), model: DEFAULT_MODEL }; continue }
+    if ([400, 404].includes(res?.status) && /decommission|not found|does not exist|no longer supported/i.test(err.message) && p.model !== DEFAULT_MODEL && !hasImages(p)) { p = { ...strip(p), model: DEFAULT_MODEL }; continue }
     return { err, exhausted }
   }
   return { err: { status: 502, message: 'Échec après plusieurs tentatives.' } }

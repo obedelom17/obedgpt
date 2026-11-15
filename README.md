@@ -129,3 +129,7 @@ Notes : l'offre gratuite limite le temps CPU à 10 ms par requête (le streaming
 - Sentry (facultatif) : variable de BUILD `VITE_SENTRY_DSN`. Aucun SDK ajouté.
 - Limite globale 120 requêtes/min/IP dans `functions/api/[[route]].js`. Ajouter une règle WAF « Rate limiting » dans le dashboard Cloudflare pour une limite partagée entre instances.
 - Raccourcis : Ctrl K, Ctrl B, Ctrl Maj O, Alt 1 à 5, Ctrl /.
+
+## Modèles Groq (déprécations 2026)
+
+Llama 4 Scout/Maverick, qwen3-32b, llama-3.1-8b-instant, llama-3.3-70b et compound-mini sont retirés. Vision : `qwen/qwen3.6-27b` (3 images max, Preview). Variable `GROQ_VISION_MODEL` pour imposer un autre modèle.

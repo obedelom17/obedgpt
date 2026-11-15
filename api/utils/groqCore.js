@@ -94,12 +94,11 @@ export function classify(id) {
   else if (/orpheus|playai/i.test(id)) m.kind = 'tts'
   else if (/guard|safeguard/i.test(id)) m.kind = 'guard'
   else if (/^groq\/compound/i.test(id)) m.kind = 'compound'
-  if (/llama-4|scout|maverick|vision|-vl\b|vl-/i.test(id)) m.vision = true
+  if (/llama-4|scout|maverick|vision|-vl\b|vl-|qwen\/qwen3\.\d/i.test(id)) m.vision = true
   if (/gpt-oss|qwen3|deepseek-r1|kimi/i.test(id)) m.reasoning = true
   return m
 }
-const FALLBACK = ['openai/gpt-oss-120b', 'openai/gpt-oss-20b', 'llama-3.3-70b-versatile', 'llama-3.1-8b-instant', 'qwen/qwen3-32b', 'meta-llama/llama-4-scout-17b-16e-instruct',
-  'groq/compound', 'groq/compound-mini', 'whisper-large-v3', 'whisper-large-v3-turbo', 'canopylabs/orpheus-v1-english', 'canopylabs/orpheus-arabic-saudi', 'openai/gpt-oss-safeguard-20b', 'meta-llama/llama-prompt-guard-2-86m']
+const FALLBACK = ['openai/gpt-oss-120b', 'openai/gpt-oss-20b', 'qwen/qwen3.6-27b', 'groq/compound', 'whisper-large-v3', 'whisper-large-v3-turbo', 'canopylabs/orpheus-v1-english', 'canopylabs/orpheus-arabic-saudi', 'openai/gpt-oss-safeguard-20b', 'meta-llama/llama-prompt-guard-2-86m']
 let modelCache = { at: 0, list: null, live: false }
 export async function getModels() {
   if (modelCache.list && Date.now() - modelCache.at < 10 * 60_000) return modelCache
@@ -115,9 +114,13 @@ export async function getModels() {
   return modelCache
 }
 export const hasModel = (cache, id) => cache.list.some(m => m.id === id)
+// Modèle vision : GROQ_VISION_MODEL si défini, sinon le premier modèle vision du catalogue Groq en direct.
+// (Llama 4 Scout/Maverick sont retirés ; qwen/qwen3.6-27b accepte les images, 3 maximum.)
 export function pickVision(cache) {
+  const forced = process.env.GROQ_VISION_MODEL
+  if (forced) return forced
   const v = cache.list.filter(m => m.kind === 'chat' && m.vision)
-  return (v.find(m => /scout/i.test(m.id)) || v[0])?.id || 'meta-llama/llama-4-scout-17b-16e-instruct'
+  return (v.find(m => /qwen3\.\d/i.test(m.id)) || v.find(m => /scout|maverick/i.test(m.id)) || v[0])?.id || 'qwen/qwen3.6-27b'
 }
 
 // ─── Appel chat non streamé avec rotation ───
@@ -167,7 +170,7 @@ export function sanitizeMessages(messages, max = 20) {
       const parts = []
       for (const p of m.content) {
         if (p?.type === 'text' && typeof p.text === 'string') parts.push({ type: 'text', text: p.text.slice(0, 60000) })
-        else if (p?.type === 'image_url' && typeof p.image_url?.url === 'string' && /^data:image\/(png|jpe?g|webp|gif);base64,/.test(p.image_url.url) && p.image_url.url.length < 5_600_000 && images < 5) {
+        else if (p?.type === 'image_url' && typeof p.image_url?.url === 'string' && /^data:image\/(png|jpe?g|webp|gif);base64,/.test(p.image_url.url) && p.image_url.url.length < 5_600_000 && images < 3) {
           parts.push({ type: 'image_url', image_url: { url: p.image_url.url } }); images++
         }
       }
