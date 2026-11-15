@@ -13,6 +13,7 @@ const J = 'Réponds UNIQUEMENT avec un objet JSON valide, sans texte autour ni b
 function plan(tool, b, cache) {
   const text = lim(b.text), o = b.options || {}
   switch (tool) {
+    case 'keywords': return { sys: `Extrais de la question 6 à 12 mots-clés de recherche : noms, termes techniques, synonymes et variantes proches, dans la langue de la question (et en anglais si pertinent). Schéma : {"keywords":[string]}. ${J}`, user: text.slice(0, 2000), json: true, model: cache.list.find(m => m.id === 'llama-3.1-8b-instant')?.id }
     case 'translate': return { sys: `Tu es traducteur professionnel. Traduis fidèlement vers ${LANGS[o.target] || 'anglais'}. Conserve le ton, la mise en forme et les noms propres. Réponds uniquement avec la traduction.`, user: text }
     case 'summarize': return { sys: `Tu résumes des textes. Format : ${o.style === 'bullets' ? 'liste à puces' : o.style === 'tldr' ? 'une seule phrase (TL;DR)' : 'paragraphes courts'}. Longueur : ${o.length === 'long' ? 'détaillée' : o.length === 'short' ? 'très courte' : 'moyenne'}. Langue : celle du texte. Ne rajoute aucune information.`, user: text }
     case 'rewrite': return { sys: `Reformule le texte avec un ton ${o.tone || 'professionnel'}. Garde le sens, la langue et les faits. Réponds uniquement avec le texte reformulé.`, user: text }

@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useMemo } from 'react'
-import { Send, RotateCcw, Mic, RefreshCw, Square, Pencil, Check, Download, Printer, ArrowDown, ArrowRight, Copy, Lightbulb, BookOpen, Code2, Sparkles, Volume2, X, Slash, SlidersHorizontal, ImagePlus, Globe, Terminal, Wrench, Brain, ChevronDown, ExternalLink, Loader2, Braces } from 'lucide-react'
+import { Send, RotateCcw, Mic, RefreshCw, Square, Pencil, Check, Download, Printer, ArrowDown, ArrowRight, Copy, Lightbulb, BookOpen, Code2, Sparkles, Volume2, X, Slash, SlidersHorizontal, ImagePlus, Globe, Terminal, Wrench, Brain, ChevronDown, ExternalLink, Loader2, Braces, Share2, FileText } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import Logo from '../Logo'
 import { MarkdownRenderer, ErrorBanner, ThinkingSkeleton } from '../ui'
@@ -7,6 +7,13 @@ import { useToast } from '../fx/Toast'
 import { useStreamingChat } from '../../hooks/useApiCall'
 import { useApp } from '../../App'
 import GenerationPanel from '../chat/GenerationPanel'
+import ShareDialog from '../chat/ShareDialog'
+import DocsDialog from '../chat/DocsDialog'
+import { useDocs, importDocs, removeDoc } from '../../lib/docs/useDocs'
+import { getActiveIds, setActiveIds } from '../../lib/docs/store'
+import { buildDocContext } from '../../lib/docs/query'
+import { isImageFile } from '../../lib/docs/extract'
+import { tr } from '../../i18n'
 import { Chip } from '../ui/controls'
 import { usePrefs } from '../../lib/prefs'
 import { postJson } from '../../lib/api'
@@ -92,8 +99,20 @@ export default function ChatMode() {
   const [editValue, setEditValue] = useState('')
   const [speakingIdx, setSpeakingIdx] = useState(null)
   const [slashIdx, setSlashIdx] = useState(0)
-  const [prefs] = usePrefs()
+  const [prefs, setPrefs] = usePrefs()
   const [panelOpen, setPanelOpen] = useState(false)
+  const [shareOpen, setShareOpen] = useState(null) // { messages, scope }
+  // Documents importés (bibliothèque partagée) et documents actifs pour CETTE conversation
+  const { docs } = useDocs()
+  const [docsOpen, setDocsOpen] = useState(false)
+  const [activeDocIds, setActiveDocIds] = useState(() => (activeChatId ? getActiveIds(activeChatId) : []))
+  const [docStatus, setDocStatus] = useState('')
+  const [docErrors, setDocErrors] = useState([])
+  const [preparing, setPreparing] = useState(false)
+  const lastDocRef = useRef(null)
+  const activeDocs = docs.filter(d => activeDocIds.includes(d.id))
+  useEffect(() => { setActiveDocIds(activeChatId ? getActiveIds(activeChatId) : []) }, [activeChatId])
+  useEffect(() => { if (activeChatId) setActiveIds(activeChatId, activeDocIds) }, [activeChatId, activeDocIds])
   const [attachments, setAttachments] = useState([])
   const [dragOver, setDragOver] = useState(false)
   const [transcribing, setTranscribing] = useState(false)
@@ -105,7 +124,7 @@ export default function ChatMode() {
   const agentAbort = useRef(null)
   const fileInputRef = useRef(null)
   const { loading: streaming, error: streamError, call, retry, clearError: clearStreamError, abort: abortStream } = useStreamingChat()
-  const loading = streaming || agentBusy
+  const loading = streaming || agentBusy || preparing
   const error = streamError || agentError
   const clearError = () => { clearStreamError(); setAgentError(null) }
   const abort = () => { abortStream(); agentAbort.current?.abort() }
@@ -211,14 +230,27 @@ export default function ChatMode() {
     } catch (e) { setFileError(e.message) }
   }
   const onPaste = e => { const f = [...(e.clipboardData?.files || [])]; if (f.some(x => x.type.startsWith('image/'))) { e.preventDefault(); addImages(f) } }
-  const onDrop = e => { e.preventDefault(); setDragOver(false); addImages(e.dataTransfer.files) }
+  const handleDocFiles = async files => {
+    if (!files.length || docStatus) return
+    setDocErrors([]); setDocStatus('Lecture des fichiers…')
+    const { added, errors } = await importDocs(files, { onStatus: setDocStatus })
+    setDocStatus(''); setDocErrors(errors)
+    if (added.length) { setActiveDocIds(ids => [...new Set([...ids, ...added.map(d => d.id)])]); toast(`${added.length} document${added.length > 1 ? 's' : ''} prêt${added.length > 1 ? 's' : ''}`) }
+    if (errors.length && !docsOpen) setFileError(errors[0])
+  }
+  const toggleDoc = id => setActiveDocIds(ids => (ids.includes(id) ? ids.filter(x => x !== id) : [...ids, id]))
+  const onDrop = e => {
+    e.preventDefault(); setDragOver(false)
+    const files = [...e.dataTransfer.files]
+    addImages(files.filter(isImageFile)); handleDocFiles(files.filter(f => !isImageFile(f)))
+  }
 
   // Ajoute un message assistant vide puis le remplit au fil du flux
   // (texte, raisonnement, sources, utilisation). Mesure la durée de génération.
   const patchLast = fn => setMessages(prev => { const next = [...prev]; next[next.length - 1] = fn(next[next.length - 1]); return next })
-  const appendAssistantStreamed = async (apiCallFn) => {
+  const appendAssistantStreamed = async (apiCallFn, extra) => {
     const t0 = Date.now()
-    setMessages(prev => [...prev, { role: 'assistant', content: '' }])
+    setMessages(prev => [...prev, { role: 'assistant', content: '', ...(extra || {}) }])
     const handlers = {
       onChunk: d => patchLast(m => ({ ...m, content: m.content + d })),
       onReasoning: d => patchLast(m => ({ ...m, reasoning: (m.reasoning || '') + d })),
@@ -246,20 +278,34 @@ export default function ChatMode() {
   }
   const genOptions = () => ({ model: prefs.model === 'auto' ? undefined : prefs.model, reasoning: prefs.reasoning === 'off' ? undefined : prefs.reasoning, temperature: prefs.temperature, maxTokens: prefs.maxTokens, webSearch: prefs.webSearch, codeExec: prefs.codeExec, json: prefs.jsonMode })
 
-  const runAgent = async list => {
+  const runAgent = async (list, extra = {}) => {
     const t0 = Date.now(); const ac = new AbortController(); agentAbort.current = ac
     setAgentBusy(true); setAgentError(null)
     try {
-      const data = await postJson('/api/agent', { messages: toApiMessages(list), systemPrompt, model: genOptions().model, temperature: prefs.temperature, maxTokens: prefs.maxTokens, mcpServers: prefs.mcpServers.filter(s => s.url) }, ac.signal)
-      setMessages(prev => [...prev, { role: 'assistant', content: data.text, steps: data.steps, model: data.model, ms: Date.now() - t0 }])
+      const data = await postJson('/api/agent', { messages: toApiMessages(list), systemPrompt, model: genOptions().model, temperature: prefs.temperature, maxTokens: prefs.maxTokens, mcpServers: prefs.mcpServers.filter(s => s.url), ...extra }, ac.signal)
+      setMessages(prev => [...prev, { role: 'assistant', content: data.text, steps: data.steps, model: data.model, ms: Date.now() - t0, ...(extra.context ? { sources: lastDocRef.current?.sources, docMode: lastDocRef.current?.mode } : {}) }])
       if (prefs.autoSpeak && data.text) setTimeout(() => toggleSpeak(-1, data.text), 50)
     } catch (e) { if (e.name !== 'AbortError') setAgentError(e.message) }
     finally { setAgentBusy(false) }
   }
 
+  // Contexte tiré des documents actifs (lecture complète ou meilleurs passages).
+  const prepareDocs = async list => {
+    lastDocRef.current = null
+    if (!activeDocs.length) return null
+    const question = [...list].reverse().find(m => m.role === 'user')?.content || ''
+    setPreparing(true)
+    try { lastDocRef.current = await buildDocContext({ docs: activeDocs, question, depth: prefs.docDepth, onStatus: setDocStatus }) }
+    catch { lastDocRef.current = null } finally { setPreparing(false); setDocStatus('') }
+    return lastDocRef.current
+  }
+  const docExtra = d => (d ? { sources: d.sources, docMode: d.mode } : undefined)
+
   const sendFromMessages = async (newMessages) => {
-    if (prefs.agent) return runAgent(newMessages)
-    await appendAssistantStreamed(h => call('/api/chat', { messages: toApiMessages(newMessages), systemPrompt, ...genOptions() }, h))
+    const d = await prepareDocs(newMessages)
+    const ctx = d ? { context: d.context } : {}
+    if (prefs.agent) return runAgent(newMessages, ctx)
+    await appendAssistantStreamed(h => call('/api/chat', { messages: toApiMessages(newMessages), systemPrompt, ...genOptions(), ...ctx }, h), docExtra(d))
   }
 
   const send = async () => {
@@ -273,7 +319,7 @@ export default function ChatMode() {
     await sendFromMessages(newMessages)
   }
 
-  const handleRetry = async () => { if (prefs.agent) { clearError(); return runAgent(messages) } await appendAssistantStreamed(h => retry(h)) }
+  const handleRetry = async () => { if (prefs.agent) { clearError(); return runAgent(messages, lastDocRef.current ? { context: lastDocRef.current.context } : {}) } await appendAssistantStreamed(h => retry(h), docExtra(lastDocRef.current)) }
 
   const regenerate = async () => {
     if (loading) return
@@ -326,7 +372,7 @@ export default function ChatMode() {
     setTimeout(() => win.print(), 250)
   }
 
-  const pickSlash = (s) => { setInput(s.tpl); setTimeout(() => inputRef.current?.focus(), 0) }
+  const pickSlash = (s) => { setInput(tr(s.tpl)); setTimeout(() => inputRef.current?.focus(), 0) }
 
   const onKeyDown = e => {
     if (slashMatches.length > 0) {
@@ -357,7 +403,7 @@ export default function ChatMode() {
               {tempMode && <p className="mt-4 text-sm text-ink3">Mode temporaire actif : cette conversation ne sera pas sauvegardée.</p>}
               <div className="bento mt-10">
                 {SUGGESTIONS.map(({ text, icon: Icon, sub }, i) => (
-                  <motion.button key={text} className="bento-card spot" onMouseMove={trackPointer} onClick={() => { setInput(text); inputRef.current?.focus() }}
+                  <motion.button key={text} className="bento-card spot" onMouseMove={trackPointer} onClick={() => { setInput(tr(text)); inputRef.current?.focus() }}
                     initial={{ opacity: 0, y: 18, filter: 'blur(6px)' }} animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }} transition={{ delay: 0.8 + i * 0.09, duration: 0.6, ease: easeOut }}>
                     <span className="b-ico"><Icon size={17} /></span>
                     <span className="min-w-0">
@@ -416,6 +462,12 @@ export default function ChatMode() {
                                 <div className="px-3 pb-3 pt-2 border-t" style={{ borderColor: 'var(--border)' }}><MarkdownRenderer content={'```python\n' + t.code + '\n```' + (t.output ? '\n```text\n' + t.output + '\n```' : '')} /></div>
                               </details>
                             ))}
+                            {msg.sources?.length > 0 && (
+                              <div className="sources" aria-label="Sources des documents">
+                                {msg.sources.slice(0, 12).map((s, k) => <span key={k} className="source doc-source" title={`${s.name} — ${s.ref}`}><FileText size={12} /><span>{s.name}</span><em>{s.ref}</em></span>)}
+                                {msg.docMode && msg.docMode !== 'full' && <span className="source doc-source" title="Seuls certains passages ont été envoyés au modèle"><em>{msg.docMode === 'rag' ? 'extraits pertinents' : 'extraits répartis'}</em></span>}
+                              </div>
+                            )}
                             {msg.tools?.some(t => t.results?.length) && (
                               <div className="sources" aria-label="Sources web">
                                 {[...new Map(msg.tools.flatMap(t => t.results || []).map(r => [r.url, r])).values()].slice(0, 8).map(r => {
@@ -439,6 +491,7 @@ export default function ChatMode() {
                         {speakingIdx === i ? (speakState === 'loading' ? <Loader2 size={12} className="animate-spin" /> : <Square size={11} fill="currentColor" />) : <Volume2 size={12} />} {speakingIdx === i ? 'Arrêter' : 'Écouter'}
                       </button>
                       {isLast && lastIsAssistant && <button onClick={regenerate} aria-label="Régénérer cette réponse" className="mini-action"><RefreshCw size={12} /> Régénérer</button>}
+                      <button onClick={() => setShareOpen({ messages: messages.slice(Math.max(0, i - 1), i + 1), scope: 'one' })} aria-label="Partager cet échange" className="mini-action"><Share2 size={12} /> Partager</button>
                       {msg.ms != null && <span className="meta-time" title="Durée de génération">{fmtMs(msg.ms)}</span>}
                       {msg.model && <span className="meta-time hidden sm:inline" title="Modèle utilisé">{msg.model.split('/').pop()}</span>}
                       {msg.usage?.total && <span className="meta-time hidden sm:inline" title="Tokens utilisés">{msg.usage.total} tok</span>}
@@ -477,6 +530,12 @@ export default function ChatMode() {
               {attachments.map((a, k) => <div key={k} className="attach"><img src={a.thumb} alt={`Image ${k + 1}`} /><button onClick={() => setAttachments(list => list.filter((_, j) => j !== k))} aria-label="Retirer l'image">×</button></div>)}
             </div>
           )}
+          {(activeDocs.length > 0 || docStatus) && (
+            <div className="flex flex-wrap gap-1.5 px-3 pt-2.5">
+              {activeDocs.map(d => <Chip key={d.id} tone="accent" title={d.name} onRemove={() => toggleDoc(d.id)}><FileText size={11} /> <span className="truncate max-w-[9.5rem]">{d.name}</span></Chip>)}
+              {docStatus && <Chip tone="signal"><Loader2 size={11} className="animate-spin" /> {docStatus}</Chip>}
+            </div>
+          )}
           {(prefs.webSearch || prefs.codeExec || prefs.agent || prefs.jsonMode || prefs.reasoning !== 'off' || prefs.model !== 'auto') && (
             <div className="flex flex-wrap gap-1.5 px-3 pt-2.5">
               {prefs.model !== 'auto' && <Chip>{prefs.model.split('/').pop()}</Chip>}
@@ -508,12 +567,14 @@ export default function ChatMode() {
               className="icon-btn" style={listening ? { color: 'var(--danger)', background: 'var(--surface-2)' } : undefined}>
               {transcribing ? <Loader2 size={16} className="animate-spin" /> : listening ? <span className="mic-wave" aria-hidden="true"><i /><i /><i /><i /></span> : <Mic size={17} />}
             </button>
+            <button onClick={() => setDocsOpen(true)} title="Documents : PDF, Word, Excel, PowerPoint…" aria-label="Joindre un document" className="icon-btn" style={activeDocs.length ? { color: 'var(--accent)' } : undefined}><FileText size={17} /></button>
             <input ref={fileInputRef} type="file" accept="image/*" multiple hidden onChange={e => { addImages(e.target.files); e.target.value = '' }} />
             <button onClick={() => fileInputRef.current?.click()} title="Joindre une image (vision)" aria-label="Joindre une image" className="icon-btn"><ImagePlus size={17} /></button>
             <button onClick={() => setPanelOpen(o => !o)} title="Réglages Groq : modèle, web, code, agent" aria-label="Ouvrir les réglages Groq" aria-expanded={panelOpen} className="icon-btn" style={panelOpen || prefs.webSearch || prefs.codeExec || prefs.agent ? { color: 'var(--accent)' } : undefined}><SlidersHorizontal size={16} /></button>
             <button onClick={() => { setInput('/'); inputRef.current?.focus() }} title="Commandes rapides" aria-label="Ouvrir les commandes rapides" className="icon-btn hidden sm:inline-grid"><Slash size={16} /></button>
             {messages.length > 0 && (
               <>
+                <button onClick={() => setShareOpen({ messages, scope: 'all' })} aria-label="Partager la conversation" title="Partager par lien" className="icon-btn"><Share2 size={16} /></button>
                 <button onClick={reset} aria-label="Vider la conversation" title="Vider la conversation" className="icon-btn"><RotateCcw size={16} /></button>
                 <button onClick={exportMarkdown} aria-label="Exporter en Markdown" title="Exporter en Markdown" className="icon-btn hidden sm:inline-grid"><Download size={16} /></button>
                 <button onClick={exportPrintable} aria-label="Imprimer / Exporter en PDF" title="Imprimer / PDF" className="icon-btn hidden sm:inline-grid"><Printer size={16} /></button>
@@ -531,6 +592,8 @@ export default function ChatMode() {
         </div>
         <p className="composer-note">ObedGPT peut commettre des erreurs. Vérifiez les informations importantes.</p>
       </div>
+      {docsOpen && <DocsDialog docs={docs} activeIds={activeDocIds} onToggle={toggleDoc} onImport={handleDocFiles} onDelete={id => { removeDoc(id); setActiveDocIds(ids => ids.filter(x => x !== id)) }} depth={prefs.docDepth} onDepth={v => setPrefs({ docDepth: v })} status={docStatus && !preparing ? docStatus : ''} errors={docErrors} onClose={() => setDocsOpen(false)} />}
+      {shareOpen && <ShareDialog title={messages[0]?.content?.slice(0, 60)} messages={shareOpen.messages.map(({ role, content }) => ({ role, content }))} initialScope={shareOpen.scope} onClose={() => setShareOpen(null)} />}
     </div>
   )
 }

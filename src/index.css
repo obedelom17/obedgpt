@@ -579,3 +579,40 @@ body { overscroll-behavior: none; }
 .pre-out { white-space: pre-wrap; overflow-wrap: anywhere; font-family: 'JetBrains Mono', monospace; font-size: .8rem; line-height: 1.55; padding: .8rem; border-radius: 12px; background: var(--surface-2); border: 1px solid var(--border); max-height: 360px; overflow: auto; }
 @media (max-width: 767px) { .flip-in { min-height: 240px; } .rec-btn { width: 76px; height: 76px; } .source span { max-width: 150px; } }
 @media (prefers-reduced-motion: reduce) { .flip-in { transition: none; } }
+
+/* ==========================================================================
+   v7 — Mermaid, aperçu de rendu, fenêtres modales, partage
+   ========================================================================== */
+.mermaid-view { padding: 1rem; overflow-x: auto; display: flex; justify-content: center; -webkit-overflow-scrolling: touch; }
+.mermaid-view svg { max-width: 100%; height: auto; }
+.mermaid-skel { padding: 1.4rem 1rem; display: grid; gap: .7rem; }
+.mermaid-err { display: flex; gap: .45rem; align-items: center; padding: .55rem 1rem; font-size: .78rem; color: var(--warn); border-bottom: 1px solid var(--border); }
+.syntax-header .copy-btn[aria-pressed="true"] { color: var(--accent); }
+.preview-bar { display: flex; gap: .25rem; padding: .35rem .6rem; border-bottom: 1px solid var(--border); overflow-x: auto; }
+.preview-stage { display: flex; justify-content: center; background: repeating-conic-gradient(var(--surface-2) 0% 25%, transparent 0% 50%) 50% / 18px 18px; overflow: auto; }
+.preview-frame { height: 100%; border: 0; background: #fff; box-shadow: 0 0 0 1px var(--border-strong); }
+.modal-overlay { position: fixed; inset: 0; z-index: 90; display: grid; place-items: center; padding: max(1rem, var(--safe-t)) max(1rem, var(--safe-r)) max(1rem, var(--safe-b)) max(1rem, var(--safe-l)); background: rgba(5, 12, 9, .6); backdrop-filter: blur(6px); animation: fadeIn .18s ease; }
+.modal { width: min(560px, 100%); max-height: 100%; display: flex; flex-direction: column; border-radius: 22px; border: 1px solid var(--border-strong); background: var(--solid); box-shadow: 0 40px 100px -30px rgba(0,0,0,.6); overflow: hidden; animation: popIn .25s var(--ease); }
+.modal.wide { width: min(1100px, 100%); height: min(760px, 100%); }
+.modal-head { display: flex; align-items: center; justify-content: space-between; gap: .75rem; padding: .7rem .8rem .7rem 1.1rem; border-bottom: 1px solid var(--border); }
+.modal-body { flex: 1; min-height: 0; overflow: auto; padding: 1rem 1.1rem 1.2rem; }
+.modal.wide .modal-body { padding: .8rem; }
+.mermaid-full { overflow: auto; border: 1px solid var(--border); border-radius: 14px; background: var(--surface); height: calc(100% - 46px); }
+@keyframes fadeIn { from { opacity: 0 } } @keyframes popIn { from { opacity: 0; transform: translateY(14px) scale(.98) } }
+@media (max-width: 767px) { .modal.wide { height: 100%; border-radius: 18px; } .modal-overlay { padding: max(.5rem, var(--safe-t)) .5rem max(.5rem, var(--safe-b)); } }
+.share-link { width: 100%; font-family: 'JetBrains Mono', monospace; font-size: .74rem; }
+.shared-bar { position: sticky; top: 0; z-index: 20; display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: calc(.7rem + var(--safe-t)) calc(1rem + var(--safe-r)) .7rem calc(1rem + var(--safe-l)); background: color-mix(in srgb, var(--bg) 60%, transparent); backdrop-filter: blur(18px); border-bottom: 1px solid var(--border); }
+.shared-cta { position: fixed; left: 0; right: 0; bottom: 0; z-index: 20; display: flex; justify-content: center; padding: 1rem 1rem calc(1rem + var(--safe-b)); background: linear-gradient(transparent, var(--bg) 60%); pointer-events: none; }
+.shared-cta .btn-primary { pointer-events: auto; box-shadow: 0 16px 40px -14px var(--accent); }
+.lang-btn { width: auto !important; padding: 0 .55rem; gap: .3rem; display: inline-flex; align-items: center; }
+.lang-code { font-family: 'JetBrains Mono', monospace; font-size: .7rem; font-weight: 600; }
+.preview-bar .copy-btn { font-size: .72rem; font-family: 'JetBrains Mono', monospace; }
+.preview-bar .copy-btn[aria-pressed="true"] { color: var(--accent); background: var(--accent-soft); }
+/* .icon-btn est défini hors des couches Tailwind : on réaffirme hidden / sm:inline-grid */
+.icon-btn.hidden { display: none; }
+@media (min-width: 640px) { .icon-btn.hidden.sm\:inline-grid { display: inline-grid; } }
+@media (max-width: 767px) { .gen-scrim { z-index: 80; } .gen-panel { z-index: 81; } }
+.doc-row { display: flex; align-items: center; gap: .4rem; }
+.doc-row .switch-row { min-width: 0; }
+.doc-row .switch-row .block { overflow-wrap: anywhere; }
+.doc-source em { font-style: normal; font-family: 'JetBrains Mono', monospace; font-size: .68rem; color: var(--accent); }

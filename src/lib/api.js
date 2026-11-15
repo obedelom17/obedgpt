@@ -20,7 +20,7 @@ export async function postJson(url, body, signal) {
 
 let modelsPromise = null
 export function fetchModels(force = false) {
-  if (!modelsPromise || force) modelsPromise = fetch('/api/models').then(parse).catch(e => { modelsPromise = null; throw e })
+  if (!modelsPromise || force) modelsPromise = fetch('/api/models').then(parse).then(d => { if (!Array.isArray(d?.models)) throw new Error('Liste de modèles indisponible.'); return d }).catch(e => { modelsPromise = null; throw e })
   return modelsPromise
 }
 

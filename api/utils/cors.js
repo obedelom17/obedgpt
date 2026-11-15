@@ -7,11 +7,12 @@ const ALLOWED_ORIGINS = [
   'http://localhost:5173', // dev local (vite)
   'http://localhost:3000',
 ]
-const PREVIEW_ORIGIN_RE = /^https:\/\/obedgpt-[a-z0-9-]+\.vercel\.app$/
+const PREVIEW_ORIGIN_RE = /^https:\/\/([a-z0-9-]+\.)?obedgpt[a-z0-9-]*\.(vercel\.app|pages\.dev)$/
 
 function isOriginAllowed(origin) {
   if (!origin) return false
-  return ALLOWED_ORIGINS.includes(origin) || PREVIEW_ORIGIN_RE.test(origin)
+  const extra = (process.env.ALLOWED_ORIGINS || '').split(',').map(s => s.trim()).filter(Boolean)
+  return ALLOWED_ORIGINS.includes(origin) || extra.includes(origin) || PREVIEW_ORIGIN_RE.test(origin)
 }
 
 /** @returns {boolean} true si la requête était un OPTIONS déjà traité. */

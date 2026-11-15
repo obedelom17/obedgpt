@@ -16,6 +16,7 @@ export const DEFAULT_PREFS = {
   voice: 'autumn',
   speed: 1,
   sttLanguage: 'auto',
+  docDepth: 'normal',   // courte | normale | large (documents importés)
   mcpServers: [],       // [{label,url,token}]
 }
 let state = load()

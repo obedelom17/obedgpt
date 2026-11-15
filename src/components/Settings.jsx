@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
+import { useLang } from '../i18n'
 import { motion } from 'framer-motion'
 import { Check, User, Download, Upload, Sun, Moon, Monitor, Mail, Github } from 'lucide-react'
 import { useApp } from '../App'
@@ -40,6 +41,7 @@ function resizeImage(file, maxSize = 256) {
 }
 
 export default function Settings() {
+  const [lang, setLang] = useLang()
   const { history, clearHistory, importHistory } = useApp()
   const { themePref, setThemePref, fontSize, setFontSize, accent, setAccent } = useTheme()
   const [avatar, setAvatar] = useState(() => localStorage.getItem('obedgpt-avatar') || '')
@@ -164,6 +166,17 @@ export default function Settings() {
                 {ACCENTS.map(a => (
                   <button key={a.id} onClick={() => setAccent(a.id)} aria-pressed={accent === a.id} aria-label={`Accent ${a.label}`} title={a.label} className="swatch" style={{ background: a.swatch }}>
                     {accent === a.id && <motion.span initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: 'spring', stiffness: 500, damping: 18 }}><Check size={16} color="#fff" strokeWidth={3} /></motion.span>}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div>
+              <span className="field-label">Langue de l'interface</span>
+              <div className="segmented" role="group" aria-label="Langue de l'interface">
+                {[{ id: 'fr', label: 'Français' }, { id: 'en', label: 'English' }].map(({ id, label }) => (
+                  <button key={id} onClick={() => setLang(id)} aria-pressed={lang === id}>
+                    {lang === id && <motion.span layoutId="lang-seg" className="seg-pill" transition={{ type: 'spring', stiffness: 460, damping: 36 }} />}
+                    <span>{label}</span>
                   </button>
                 ))}
               </div>

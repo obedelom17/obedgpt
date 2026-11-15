@@ -1,0 +1,12 @@
+# Cloudflare Pages : site statique (dist/) + fonctions /api/* (dossier functions/)
+name = "obedgpt"
+pages_build_output_dir = "dist"
+compatibility_date = "2025-06-01"
+compatibility_flags = ["nodejs_compat"]
+
+# Variables non secrètes (facultatif) :
+# [vars]
+# GROQ_MODEL = "openai/gpt-oss-120b"
+#
+# Secrets (à ne PAS écrire ici) :
+#   npx wrangler pages secret put GROQ_API_KEYS --project-name obedgpt

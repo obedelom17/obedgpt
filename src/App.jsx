@@ -8,6 +8,9 @@ import { LoadingDots } from './components/ui'
 import { MotionConfig, AnimatePresence, motion } from 'framer-motion'
 import CommandPalette from './components/fx/CommandPalette'
 import { ToastProvider } from './components/fx/Toast'
+import SharedView from './components/SharedView'
+import { useLang } from './i18n'
+import { decodeShare, hasShareLink, resolveShareCode } from './lib/share'
 
 // Chat est le mode par défaut donc chargé immédiatement. Les autres modes
 // sont chargés à la demande : sur mobile/connexion lente, ça évite de
@@ -37,6 +40,20 @@ export function useApp() {
 }
 
 export default function App() {
+  const [lang] = useLang()
+  // Lien de partage (#s=...) : la conversation s'ouvre en lecture seule.
+  const [shared, setShared] = useState(() => (hasShareLink() ? { state: 'loading' } : null))
+  useEffect(() => {
+    const load = () => {
+      if (!hasShareLink()) return setShared(null)
+      setShared({ state: 'loading' })
+      resolveShareCode().then(decodeShare).then(d => setShared({ state: 'ok', data: d }))
+        .catch(e => setShared({ state: 'error', error: e.message && !/atob|JSON|decode/i.test(e.message) ? e.message : 'Le lien est invalide ou a été tronqué par la messagerie qui l\'a transmis.' }))
+    }
+    load(); window.addEventListener('hashchange', load)
+    return () => window.removeEventListener('hashchange', load)
+  }, [])
+  const closeShared = () => { history.replaceState(null, '', '/' + location.search); setShared(null) }
   // Les raccourcis PWA (manifest.json) pointent vers /?mode=code etc. :
   // on lit ce paramètre au démarrage pour ouvrir directement le bon mode.
   const initialMode = (() => {
@@ -86,6 +103,13 @@ export default function App() {
     setSidebarOpen(false)
   }
 
+  const continueShared = () => {
+    if (shared?.state !== 'ok') return
+    const id = historyManager.createNewId()
+    historyManager.saveConversation(id, shared.data.title || shared.data.messages[0]?.content.slice(0, 50) || 'Conversation', shared.data.messages)
+    setActiveChatId(id); setActiveMode('chat'); closeShared()
+  }
+
   const ActiveComponent = MODES[activeMode]?.component || ChatMode
 
   const contextValue = {
@@ -109,7 +133,8 @@ export default function App() {
     <ThemeProvider>
       <ToastProvider>
         <AppContext.Provider value={contextValue}>
-         <MotionConfig reducedMotion="user">
+         <MotionConfig reducedMotion="user" key={lang + (shared ? 's' : '')}>
+          {shared ? (shared.state === 'loading' ? <div className="h-[100dvh] flex items-center justify-center"><LoadingDots label="Chargement..." /></div> : <SharedView data={shared.data} error={shared.error} onContinue={continueShared} onClose={closeShared} />) : (<>
           <div className="shell">
             <div className="aurora" aria-hidden="true"><i /><i /><i /></div>
             <div className="grain" aria-hidden="true" />
@@ -129,6 +154,7 @@ export default function App() {
             </div>
           </div>
           <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} />
+          </>)}
          </MotionConfig>
         </AppContext.Provider>
       </ToastProvider>

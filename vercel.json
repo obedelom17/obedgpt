@@ -32,6 +32,9 @@
     },
     "api/models.js": {
       "maxDuration": 10
+    },
+    "api/share.js": {
+      "maxDuration": 10
     }
   }
 }

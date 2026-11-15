@@ -39,7 +39,8 @@ export default async function handler(req, res) {
   const body = req.body || {}
   const cache = await getModels()
   const model = hasModel(cache, body.model) && !/compound|whisper|orpheus|guard/i.test(body.model) ? body.model : DEFAULT_MODEL
-  const sys = typeof body.systemPrompt === 'string' && body.systemPrompt.trim() ? body.systemPrompt.slice(0, 8000) : SYSTEM
+  const sys0 = typeof body.systemPrompt === 'string' && body.systemPrompt.trim() ? body.systemPrompt.slice(0, 8000) : SYSTEM
+  const sys = typeof body.context === 'string' && body.context.trim() ? `${sys0}\n\n${body.context.slice(0, 60000)}` : sys0
 
   const mcp = cleanMcp(body.mcpServers)
   if (mcp.length) {

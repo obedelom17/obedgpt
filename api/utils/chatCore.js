@@ -11,11 +11,12 @@ function buildPlan(body, cache) {
   const { messages, images } = sanitizeMessages(body.messages, MAX_HISTORY)
   const sys = typeof body.systemPrompt === 'string' && body.systemPrompt.trim()
     ? [{ role: 'system', content: body.systemPrompt.slice(0, 8000) }] : []
+  const ctx = typeof body.context === 'string' && body.context.trim() ? [{ role: 'system', content: body.context.slice(0, 60000) }] : []
   const wantTools = !!(body.webSearch || body.codeExec)
   let model = hasModel(cache, body.model) ? body.model : null
   if (model && ['stt', 'tts', 'guard'].includes(cache.list.find(m => m.id === model)?.kind)) model = null
 
-  const payload = { messages: [...sys, ...messages], temperature: clamp(body.temperature, 0, 2, 0.7), max_tokens: clamp(body.maxTokens, 64, 8192, 2048) }
+  const payload = { messages: [...sys, ...ctx, ...messages], temperature: clamp(body.temperature, 0, 2, 0.7), max_tokens: clamp(body.maxTokens, 64, 8192, 2048) }
   const features = []
   if (images > 0) {
     model = pickVision(cache); features.push('vision')

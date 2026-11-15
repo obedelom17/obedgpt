@@ -73,3 +73,43 @@ Une seule variable : `GROQ_API_KEYS`. Aucune autre clé n'est nécessaire.
 | **Code** | Génération, explication, exécution Python |
 
 Limites à connaître : Groq ne génère ni images ni embeddings ; Orpheus lit l'anglais et l'arabe (le français passe par la voix du navigateur) ; certains modèles (Orpheus) demandent d'accepter leurs conditions une fois dans la console Groq ; l'API Batch peut nécessiter un compte avec facturation.
+
+
+## Partage, diagrammes, aperçu, anglais
+
+- **Partage par lien** : bouton dans le chat et sur chaque réponse. La conversation est compressée dans la partie `#` de l'URL : rien n'est stocké sur un serveur. Pour des liens courts (`/s/xxxxxxxxxx`, conservés 30 jours), crée une base Redis gratuite sur upstash.com et renseigne `UPSTASH_REDIS_REST_URL` et `UPSTASH_REDIS_REST_TOKEN` dans Vercel. Sans ça, l'app utilise le lien intégré (plus long, mais sans aucun stockage).
+- **Mermaid** : les blocs ```` ```mermaid ```` deviennent des diagrammes (chargés à la demande), exportables en SVG.
+- **Aperçu** : les blocs `html` et `svg` s'affichent dans une iframe isolée (mobile, tablette, bureau).
+- **Sécurité Markdown** : `rehype-sanitize` retire scripts, iframes et gestionnaires d'évènements.
+- **Anglais** : sélecteur FR/EN (header, paramètres, palette) ou `?lang=en`. Les textes sont traduits au rendu via `src/i18n` (dictionnaire `en.json` + `rules.js`). Pour traduire un nouveau texte, ajoute-le dans `en.json`.
+
+
+## Documents (PDF, Word, Excel, PowerPoint, scans)
+
+Bouton « Joindre un document » dans le chat. Le texte est extrait **dans le navigateur** (pdf.js, mammoth, SheetJS, JSZip) et conservé dans IndexedDB : le fichier n'est jamais envoyé à un serveur.
+- Petit document : tout le texte part avec la question.
+- Gros document : recherche par mots-clés (BM25, MiniSearch) + reformulation de la question par un modèle rapide ; seuls les meilleurs passages partent, avec citations `[fichier, p. N]`.
+- Résumé demandé : extraits répartis sur tout le document.
+- PDF scannés et photos : OCR page par page par le modèle vision de Groq (même clé), jusqu'à 45 pages.
+- Réglage « Profondeur de lecture » : 8 000 / 12 000 / 24 000 caractères par question (le quota gratuit de Groq limite les tokens par minute).
+
+## Hébergement sur Cloudflare Pages
+
+L'app tourne telle quelle sur Cloudflare : `functions/api/[[route]].js` adapte les routes `api/` (écrites pour Vercel) aux Pages Functions, y compris le streaming du chat. Testé avec `wrangler pages dev` (workerd).
+
+**Déploiement par Git (recommandé)**
+1. Pousse le dépôt sur GitHub.
+2. Cloudflare → Workers & Pages → Create → Pages → Connect to Git.
+3. Build command : `npm run build` · Output directory : `dist`.
+4. Settings → Variables and Secrets : ajoute `GROQ_API_KEYS` (type Secret) ; en option `GROQ_MODEL`, `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN`, `ALLOWED_ORIGINS`.
+5. Settings → Functions → Compatibility flags : `nodejs_compat` (déjà dans `wrangler.toml`, vérifie qu'il est actif pour Production et Preview).
+
+**Déploiement en ligne de commande**
+```
+npx wrangler login
+npx wrangler pages secret put GROQ_API_KEYS --project-name obedgpt
+npm run cf:deploy
+```
+**Test local** : copie `.dev.vars.example` en `.dev.vars`, puis `npm run cf:dev` (http://localhost:8788).
+
+Notes : l'offre gratuite limite le temps CPU à 10 ms par requête (le streaming et l'attente de Groq ne comptent pas) ; si `transcribe` ou `agent` dépassent, passe au plan Workers payant. `GROQ_BASE_URL` permet de passer par Cloudflare AI Gateway (cache, journaux, limites). Les limites de débit par IP sont en mémoire par instance : pour une vraie protection, ajoute une règle de rate limiting Cloudflare sur `/api/*`.

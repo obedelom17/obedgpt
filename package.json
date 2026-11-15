@@ -6,21 +6,30 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "cf:dev": "npm run build && wrangler pages dev dist --port 8788",
+    "cf:deploy": "npm run build && wrangler pages deploy dist --project-name obedgpt"
   },
   "dependencies": {
     "framer-motion": "^14.12.0",
     "groq-sdk": "^0.9.0",
+    "jszip": "^3.10.2",
     "katex": "^0.17.0",
     "lucide-react": "^0.468.0",
+    "mammoth": "^1.13.0",
+    "mermaid": "^12.3.0",
+    "minisearch": "^7.2.0",
+    "pdfjs-dist": "^6.5.438",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-markdown": "^9.0.1",
     "react-syntax-highlighter": "^15.5.0",
     "rehype-katex": "^7.0.1",
     "rehype-raw": "^7.0.0",
+    "rehype-sanitize": "^6.0.0",
     "remark-gfm": "^4.0.0",
-    "remark-math": "^6.0.0"
+    "remark-math": "^6.0.0",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "@types/react": "^18.3.1",
@@ -29,6 +38,7 @@
     "autoprefixer": "^10.4.20",
     "postcss": "^8.4.49",
     "tailwindcss": "^3.4.17",
-    "vite": "^6.0.5"
+    "vite": "^6.0.5",
+    "wrangler": "^4.162.0"
   }
 }

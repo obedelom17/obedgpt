@@ -5,7 +5,8 @@
 //  Rotation automatique entre plusieurs clés (GROQ_API_KEYS=k1,k2,k3).
 // ═══════════════════════════════════════════════════════════════
 
-export const BASE = 'https://api.groq.com/openai/v1'
+// GROQ_BASE_URL permet de passer par Cloudflare AI Gateway (cache, logs, limites) ou un proxy.
+export const BASE = (process.env.GROQ_BASE_URL || 'https://api.groq.com/openai/v1').replace(/\/$/, '')
 const KEYS = (process.env.GROQ_API_KEYS || process.env.GROQ_API_KEY || '').split(',').map(k => k.trim()).filter(Boolean)
 export const hasKeys = () => KEYS.length > 0
 export const keyCount = () => KEYS.length

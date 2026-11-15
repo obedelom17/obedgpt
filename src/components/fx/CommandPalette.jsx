@@ -3,11 +3,13 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { Search, MessageSquare, Code2, Volume2, Wand2, Cpu, Settings as SettingsIcon, Plus, Sun, Moon, Flame, MessagesSquare, CornerDownLeft, PanelLeft, Palette } from 'lucide-react'
 import { useApp } from '../../App'
 import { useTheme, ACCENTS } from '../../hooks/useTheme.jsx'
+import { useLang } from '../../i18n'
 
 // Palette de commandes : Ctrl/Cmd + K.
 export default function CommandPalette({ open, onClose }) {
   const { setActiveMode, startNewChat, openConversation, history, tempMode, setTempMode, toggleSidebar } = useApp()
   const { theme, setThemePref, setAccent } = useTheme()
+  const [lang, setLang] = useLang()
   const [q, setQ] = useState('')
   const [sel, setSel] = useState(0)
   const inputRef = useRef(null)
@@ -18,6 +20,7 @@ export default function CommandPalette({ open, onClose }) {
       { id: 'new', group: 'Actions', label: 'Nouveau chat', icon: Plus, run: () => startNewChat() },
       { id: 'temp', group: 'Actions', label: tempMode ? 'Désactiver le mode temporaire' : 'Activer le mode temporaire', icon: Flame, run: () => setTempMode(!tempMode) },
       { id: 'side', group: 'Actions', label: 'Afficher ou masquer la barre latérale', icon: PanelLeft, run: () => toggleSidebar() },
+      { id: 'lang', group: 'Apparence', label: lang === 'en' ? 'Passer en français' : 'Switch to English', icon: Palette, run: () => setLang(lang === 'en' ? 'fr' : 'en') },
       { id: 'theme', group: 'Apparence', label: theme === 'dark' ? 'Passer en thème clair' : 'Passer en thème sombre', icon: theme === 'dark' ? Sun : Moon, run: () => setThemePref(theme === 'dark' ? 'light' : 'dark') },
       ...ACCENTS.map(a => ({ id: 'acc-' + a.id, group: 'Apparence', label: `Accent ${a.label.toLowerCase()}`, icon: Palette, run: () => setAccent(a.id) })),
       { id: 'chat', group: 'Navigation', label: 'Chat', icon: MessageSquare, run: () => setActiveMode('chat') },
@@ -31,7 +34,7 @@ export default function CommandPalette({ open, onClose }) {
     const all = [...base, ...convs]
     const s = q.trim().toLowerCase()
     return s ? all.filter(i => i.label.toLowerCase().includes(s)) : all.slice(0, 16)
-  }, [q, history, theme, tempMode, startNewChat, setActiveMode, openConversation, setThemePref, setAccent, setTempMode, toggleSidebar])
+  }, [q, history, theme, lang, setLang, tempMode, startNewChat, setActiveMode, openConversation, setThemePref, setAccent, setTempMode, toggleSidebar])
 
   useEffect(() => { if (open) { setQ(''); setSel(0); setTimeout(() => inputRef.current?.focus(), 40) } }, [open])
   useEffect(() => { setSel(0) }, [q])

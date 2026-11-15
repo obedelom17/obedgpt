@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { motion } from 'framer-motion'
 import { Globe, Terminal, Wrench, Braces, Volume2, Brain, X } from 'lucide-react'
 import { usePrefs } from '../../lib/prefs'
@@ -9,14 +10,24 @@ const EFFORTS = [{ id: 'off', label: 'Auto' }, { id: 'low', label: 'Faible' }, {
 
 // Panneau de réglages de génération : modèle, raisonnement, recherche web,
 // exécution de code, agent (outils + MCP), mode JSON, lecture automatique.
+// Sur mobile le panneau est une feuille plein bas : on le sort du composer
+// (dont le flou crée un contexte qui piégerait position: fixed).
+const useMobile = () => {
+  const q = '(max-width: 767px)'
+  const [m, setM] = useState(() => window.matchMedia(q).matches)
+  useEffect(() => { const mq = window.matchMedia(q); const f = () => setM(mq.matches); mq.addEventListener('change', f); return () => mq.removeEventListener('change', f) }, [])
+  return m
+}
+
 export default function GenerationPanel({ onClose }) {
+  const mobile = useMobile()
   const [p, set] = usePrefs()
   const [models, setModels] = useState([])
   useEffect(() => { fetchModels().then(d => setModels(d.models.filter(m => m.kind === 'chat'))).catch(() => {}) }, [])
   const tools = p.webSearch || p.codeExec
   const gptOss = /gpt-oss|qwen3/i.test(p.model === 'auto' ? 'gpt-oss' : p.model)
 
-  return (
+  const content = (
     <>
       <div className="gen-scrim" onClick={onClose} />
       <motion.div className="gen-panel" role="dialog" aria-label="Réglages de génération" initial={{ opacity: 0, y: 10, scale: .98 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 8 }} transition={{ duration: .18 }}>
@@ -51,4 +62,5 @@ export default function GenerationPanel({ onClose }) {
       </motion.div>
     </>
   )
+  return mobile ? createPortal(content, document.body) : content
 }

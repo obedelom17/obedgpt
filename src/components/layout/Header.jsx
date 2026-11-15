@@ -2,6 +2,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { Menu, Plus, Search } from 'lucide-react'
 import { useApp } from '../../App'
 import ThemeToggle from '../fx/ThemeToggle'
+import LangToggle from '../fx/LangToggle'
 import { usePrefs } from '../../lib/prefs'
 import { useQuota } from '../../lib/quota'
 
@@ -30,6 +31,7 @@ export default function Header({ mode }) {
       </button>
       <button onClick={openPalette} className="icon-btn sm:hidden" aria-label="Rechercher"><Search size={17} /></button>
       <button onClick={startNewChat} className="icon-btn md:hidden" aria-label="Nouveau chat"><Plus size={18} /></button>
+      <LangToggle />
       <ThemeToggle />
       <div className={`busy-line ${busy ? 'on' : ''}`} />
     </header>

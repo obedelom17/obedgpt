@@ -1,0 +1,5 @@
+# Copie ce fichier en .dev.vars pour `npm run cf:dev` (jamais commité).
+GROQ_API_KEYS=gsk_xxx,gsk_yyy
+# GROQ_MODEL=openai/gpt-oss-120b
+# UPSTASH_REDIS_REST_URL=
+# UPSTASH_REDIS_REST_TOKEN=

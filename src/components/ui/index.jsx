@@ -4,8 +4,8 @@ import remarkGfm from 'remark-gfm'
 import remarkMath from 'remark-math'
 import rehypeRaw from 'rehype-raw'
 import rehypeKatex from 'rehype-katex'
-import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
-import { oneLight, oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism'
+import rehypeSanitize, { defaultSchema } from 'rehype-sanitize'
+import CodeBlock from './CodeBlock'
 import { Copy, Check, X, AlertTriangle, Clock, WifiOff, KeyRound, FileX, Cpu } from 'lucide-react'
 import { useTheme } from '../../hooks/useTheme.jsx'
 import { useToast } from '../fx/Toast'
@@ -88,32 +88,31 @@ export function CopyButton({ code, label = true }) {
   )
 }
 
+// Schéma de nettoyage : le HTML « inoffensif » (br, details, tableaux...) reste
+// autorisé, mais scripts, iframes, gestionnaires d'évènements et styles en ligne
+// sont retirés. Indispensable pour les conversations partagées par lien.
+const SCHEMA = {
+  ...defaultSchema,
+  attributes: {
+    ...defaultSchema.attributes,
+    code: [...(defaultSchema.attributes?.code || []), ['className', /^language-./, 'math-inline', 'math-display']],
+    div: [...(defaultSchema.attributes?.div || []), ['className', 'math', 'math-display']],
+    span: [...(defaultSchema.attributes?.span || []), ['className', 'math', 'math-inline']],
+  },
+}
+
 export function MarkdownRenderer({ content }) {
-  const { theme } = useTheme()
   return (
     <div className="prose-obedgpt">
       <ReactMarkdown
         remarkPlugins={[remarkGfm, remarkMath]}
-        rehypePlugins={[rehypeRaw, rehypeKatex]}
+        rehypePlugins={[rehypeRaw, [rehypeSanitize, SCHEMA], rehypeKatex]}
         components={{
           code({ node, inline, className, children, ...props }) {
-            const match = /language-(\w+)/.exec(className || '')
-            const lang = match?.[1] || ''
+            const match = /language-([\w-]+)/.exec(className || '')
+            const lang = (match?.[1] || '').toLowerCase()
             const code = String(children).replace(/\n$/, '')
-            if (!inline && (match || code.includes('\n'))) {
-              const lines = code.split('\n').length
-              return (
-                <div className="syntax-wrapper">
-                  <div className="syntax-header">
-                    <span>{lang || 'code'} · {lines} ligne{lines > 1 ? 's' : ''}</span>
-                    <CopyButton code={code} />
-                  </div>
-                  <SyntaxHighlighter style={theme === 'dark' ? oneDark : oneLight} language={lang || 'text'} PreTag="div"
-                    customStyle={{ margin: 0, borderRadius: 0, background: 'transparent', fontSize: '0.82rem', padding: '1rem' }}
-                    {...props}>{code}</SyntaxHighlighter>
-                </div>
-              )
-            }
+            if (!inline && (match || code.includes('\n'))) return <CodeBlock lang={lang} code={code} htmlProps={props} />
             return <code className={className} {...props}>{children}</code>
           },
         }}
