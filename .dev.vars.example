@@ -3,3 +3,6 @@ GROQ_API_KEYS=gsk_xxx,gsk_yyy
 # GROQ_MODEL=openai/gpt-oss-120b
 # UPSTASH_REDIS_REST_URL=
 # UPSTASH_REDIS_REST_TOKEN=
+# JWT_SECRET=  (openssl rand -base64 32) : requis pour les comptes
+# PBKDF2_ITERATIONS=100000
+# VITE_SENTRY_DSN=  (variable de BUILD, pas de runtime)

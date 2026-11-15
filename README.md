@@ -113,3 +113,19 @@ npm run cf:deploy
 **Test local** : copie `.dev.vars.example` en `.dev.vars`, puis `npm run cf:dev` (http://localhost:8788).
 
 Notes : l'offre gratuite limite le temps CPU à 10 ms par requête (le streaming et l'attente de Groq ne comptent pas) ; si `transcribe` ou `agent` dépassent, passe au plan Workers payant. `GROQ_BASE_URL` permet de passer par Cloudflare AI Gateway (cache, journaux, limites). Les limites de débit par IP sont en mémoire par instance : pour une vraie protection, ajoute une règle de rate limiting Cloudflare sur `/api/*`.
+
+## Comptes et historique serveur (facultatif)
+
+1. `npx wrangler kv namespace create AUTH_KV`, puis lier le namespace au projet Pages (Settings, Bindings, KV) sous le nom `AUTH_KV`.
+2. Secret `JWT_SECRET` : `openssl rand -base64 32`.
+3. Sans KV, Upstash Redis (`UPSTASH_REDIS_REST_URL` / `_TOKEN`) sert de stockage.
+4. Sans `JWT_SECRET`, les routes `/api/auth` et `/api/sync` répondent 503 et l'app reste 100 % locale.
+- Mots de passe : PBKDF2-SHA256. Réduire `PBKDF2_ITERATIONS` si le plan gratuit dépasse la limite CPU.
+- Pas de réinitialisation de mot de passe ni de vérification d'e-mail.
+
+## Qualité et suivi
+
+- `npm test` : 16 tests (fusion d'historique, JWT, mots de passe, routes comptes, DSN). CI : `.github/workflows/ci.yml`.
+- Sentry (facultatif) : variable de BUILD `VITE_SENTRY_DSN`. Aucun SDK ajouté.
+- Limite globale 120 requêtes/min/IP dans `functions/api/[[route]].js`. Ajouter une règle WAF « Rate limiting » dans le dashboard Cloudflare pour une limite partagée entre instances.
+- Raccourcis : Ctrl K, Ctrl B, Ctrl Maj O, Alt 1 à 5, Ctrl /.

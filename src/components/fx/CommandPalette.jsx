@@ -7,7 +7,7 @@ import { useLang } from '../../i18n'
 
 // Palette de commandes : Ctrl/Cmd + K.
 export default function CommandPalette({ open, onClose }) {
-  const { setActiveMode, startNewChat, openConversation, history, tempMode, setTempMode, toggleSidebar } = useApp()
+  const { setActiveMode, startNewChat, openConversation, history, tempMode, setTempMode, toggleSidebar, openShortcuts } = useApp()
   const { theme, setThemePref, setAccent } = useTheme()
   const [lang, setLang] = useLang()
   const [q, setQ] = useState('')
@@ -20,6 +20,7 @@ export default function CommandPalette({ open, onClose }) {
       { id: 'new', group: 'Actions', label: 'Nouveau chat', icon: Plus, run: () => startNewChat() },
       { id: 'temp', group: 'Actions', label: tempMode ? 'Désactiver le mode temporaire' : 'Activer le mode temporaire', icon: Flame, run: () => setTempMode(!tempMode) },
       { id: 'side', group: 'Actions', label: 'Afficher ou masquer la barre latérale', icon: PanelLeft, run: () => toggleSidebar() },
+      { id: 'keys', group: 'Actions', label: 'Raccourcis clavier', icon: CornerDownLeft, run: () => openShortcuts() },
       { id: 'lang', group: 'Apparence', label: lang === 'en' ? 'Passer en français' : 'Switch to English', icon: Palette, run: () => setLang(lang === 'en' ? 'fr' : 'en') },
       { id: 'theme', group: 'Apparence', label: theme === 'dark' ? 'Passer en thème clair' : 'Passer en thème sombre', icon: theme === 'dark' ? Sun : Moon, run: () => setThemePref(theme === 'dark' ? 'light' : 'dark') },
       ...ACCENTS.map(a => ({ id: 'acc-' + a.id, group: 'Apparence', label: `Accent ${a.label.toLowerCase()}`, icon: Palette, run: () => setAccent(a.id) })),
@@ -34,7 +35,7 @@ export default function CommandPalette({ open, onClose }) {
     const all = [...base, ...convs]
     const s = q.trim().toLowerCase()
     return s ? all.filter(i => i.label.toLowerCase().includes(s)) : all.slice(0, 16)
-  }, [q, history, theme, lang, setLang, tempMode, startNewChat, setActiveMode, openConversation, setThemePref, setAccent, setTempMode, toggleSidebar])
+  }, [q, history, theme, lang, setLang, tempMode, startNewChat, setActiveMode, openConversation, setThemePref, setAccent, setTempMode, toggleSidebar, openShortcuts])
 
   useEffect(() => { if (open) { setQ(''); setSel(0); setTimeout(() => inputRef.current?.focus(), 40) } }, [open])
   useEffect(() => { setSel(0) }, [q])

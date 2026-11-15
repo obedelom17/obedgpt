@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, lazy, Suspense, createContext, useContext } from 'react'
+import { useState, useEffect, useCallback, useRef, lazy, Suspense, createContext, useContext } from 'react'
 import { ThemeProvider } from './hooks/useTheme.jsx'
 import { useChatHistory } from './hooks/useChatHistory'
 import Header from './components/layout/Header'
@@ -7,6 +7,9 @@ import ChatMode from './components/modes/ChatMode'
 import { LoadingDots } from './components/ui'
 import { MotionConfig, AnimatePresence, motion } from 'framer-motion'
 import CommandPalette from './components/fx/CommandPalette'
+import Shortcuts from './components/fx/Shortcuts'
+import Onboarding from './components/fx/Onboarding'
+import { useSync } from './hooks/useSync'
 import { ToastProvider } from './components/fx/Toast'
 import SharedView from './components/SharedView'
 import { useLang } from './i18n'
@@ -74,16 +77,30 @@ export default function App() {
   }, [])
   const [busy, setBusy] = useState(false)
   const [paletteOpen, setPaletteOpen] = useState(false)
+  const [shortcutsOpen, setShortcutsOpen] = useState(false)
+  const syncStatus = useSync(historyManager.history, historyManager.replaceHistory)
 
   // Ctrl/Cmd + K : palette de commandes
   useEffect(() => {
     const onKey = e => {
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); setPaletteOpen(o => !o) }
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'b') { e.preventDefault(); toggleSidebar() }
+      if ((e.ctrlKey || e.metaKey) && e.key === '/') { e.preventDefault(); setShortcutsOpen(o => !o) }
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === 'o') { e.preventDefault(); startNewChatRef.current() }
+      if (e.altKey && /^[1-5]$/.test(e.key)) { e.preventDefault(); setActiveMode(['chat', 'code', 'tts', 'atelier', 'studio'][Number(e.key) - 1]) }
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [toggleSidebar])
+
+  // Halo d'aurore qui suit légèrement le pointeur (désactivé au tactile et en mouvement réduit)
+  useEffect(() => {
+    if (matchMedia('(hover: none), (prefers-reduced-motion: reduce)').matches) return
+    let raf = 0
+    const onMove = e => { cancelAnimationFrame(raf); raf = requestAnimationFrame(() => { const r = document.documentElement.style; r.setProperty('--px', (e.clientX / innerWidth).toFixed(3)); r.setProperty('--py', (e.clientY / innerHeight).toFixed(3)) }) }
+    window.addEventListener('pointermove', onMove, { passive: true })
+    return () => { window.removeEventListener('pointermove', onMove); cancelAnimationFrame(raf) }
+  }, [])
 
   const handleModeChange = (mode) => {
     setActiveMode(mode)
@@ -96,6 +113,9 @@ export default function App() {
     setActiveMode('chat')
     setSidebarOpen(false)
   }
+
+  const startNewChatRef = useRef(null)
+  startNewChatRef.current = startNewChat
 
   const openConversation = (id) => {
     setActiveChatId(id)
@@ -118,7 +138,7 @@ export default function App() {
     startNewChat, openConversation,
     tempMode, setTempMode,
     sidebarOpen, setSidebarOpen,
-    busy, setBusy, openPalette: () => setPaletteOpen(true),
+    busy, setBusy, openPalette: () => setPaletteOpen(true), openShortcuts: () => setShortcutsOpen(true), syncStatus,
     sidebarCollapsed, toggleSidebar,
     history: historyManager.history,
     saveConversation: historyManager.saveConversation,
@@ -127,6 +147,7 @@ export default function App() {
     togglePin: historyManager.togglePin,
     clearHistory: historyManager.clearHistory,
     importHistory: historyManager.importHistory,
+    replaceHistory: historyManager.replaceHistory,
   }
 
   return (
@@ -154,6 +175,8 @@ export default function App() {
             </div>
           </div>
           <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} />
+          <Shortcuts open={shortcutsOpen} onClose={() => setShortcutsOpen(false)} />
+          <Onboarding />
           </>)}
          </MotionConfig>
         </AppContext.Provider>

@@ -5,6 +5,7 @@ import { Check, User, Download, Upload, Sun, Moon, Monitor, Mail, Github } from 
 import { useApp } from '../App'
 import { useTheme, ACCENTS } from '../hooks/useTheme.jsx'
 import Logo from './Logo'
+import AccountPanel from './account/AccountPanel'
 
 const PERSONA_KEY = 'obedgpt-persona'
 const CHANGELOG = [
@@ -209,7 +210,12 @@ export default function Settings() {
         </section>
 
         <section className="row">
-          <div><h3>Historique</h3><p className="desc">Les conversations ne vivent que dans ce navigateur. Exporte-les pour les retrouver sur un autre appareil.</p></div>
+          <div><h3>Compte</h3><p className="desc">Synchronise ton historique entre appareils. Facultatif : sans compte, tout reste dans ce navigateur.</p></div>
+          <AccountPanel />
+        </section>
+
+        <section className="row">
+          <div><h3>Historique</h3><p className="desc">Les conversations vivent dans ce navigateur (et sur ton compte si tu es connecté). Exporte-les pour une copie.</p></div>
           <div>
             <p className="text-sm mb-3"><span className="font-mono text-accent">{history.length}</span> conversation{history.length !== 1 ? 's' : ''} sauvegardée{history.length !== 1 ? 's' : ''}</p>
             <div className="flex gap-2 flex-wrap">

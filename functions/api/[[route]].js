@@ -16,6 +16,18 @@ const ROUTES = {
   tools: () => import('../../api/tools.js'),
   batch: () => import('../../api/batch.js'),
   share: () => import('../../api/share.js'),
+  auth: () => import('../../api/auth.js'),
+  sync: () => import('../../api/sync.js'),
+}
+
+// Limite globale par IP (120 requêtes/min, par instance Workers). Complète les limites par route.
+const GLOBAL = new Map()
+function globalLimit(ip) {
+  const now = Date.now()
+  if (GLOBAL.size > 3000) GLOBAL.clear()
+  const e = GLOBAL.get(ip)
+  if (!e || now > e.reset) { GLOBAL.set(ip, { n: 1, reset: now + 60_000 }); return 0 }
+  return ++e.n > 120 ? Math.ceil((e.reset - now) / 1000) : 0
 }
 
 const jsonResponse = (status, obj) => new Response(JSON.stringify(obj), { status, headers: { 'Content-Type': 'application/json; charset=utf-8' } })
@@ -64,7 +76,11 @@ export async function onRequest(context) {
   const name = Array.isArray(params.route) ? params.route[0] : params.route
   const load = ROUTES[name]
   if (!load) return jsonResponse(404, { error: 'Route inconnue.', type: 'NOT_FOUND' })
+  const wait = globalLimit(request.headers.get('cf-connecting-ip') || 'unknown')
+  if (wait) return jsonResponse(429, { error: `Trop de requêtes. Réessayez dans ${wait}s.`, type: 'RATE_LIMIT', retryAfter: wait })
 
+  // Bindings (KV) accessibles aux handlers ; variables texte → process.env
+  globalThis.__CF_ENV = env
   // Variables Cloudflare (secrets et variables du projet) → process.env
   globalThis.process ??= { env: {} }
   process.env ??= {}

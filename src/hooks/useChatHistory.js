@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
+import { markDeleted } from '../lib/account'
 
 const STORAGE_KEY = 'obedgpt-chat-history'
 const MAX_STORED_CONVERSATIONS = 50
@@ -37,6 +38,7 @@ export function useChatHistory() {
   }, [])
 
   const deleteConversation = useCallback((id) => {
+    markDeleted(id)
     setHistory(prev => prev.filter(c => c.id !== id))
   }, [])
 
@@ -49,7 +51,7 @@ export function useChatHistory() {
   }, [])
 
   const clearHistory = useCallback(() => {
-    setHistory([])
+    setHistory(prev => { prev.forEach(c => markDeleted(c.id)); return [] })
   }, [])
 
   // Fusionne un historique importé (export JSON précédent) avec l'existant :
@@ -65,7 +67,9 @@ export function useChatHistory() {
     })
   }, [])
 
+  const replaceHistory = useCallback(list => setHistory(list), [])
+
   const createNewId = useCallback(() => generateId(), [])
 
-  return { history, saveConversation, deleteConversation, renameConversation, togglePin, clearHistory, importHistory, createNewId }
+  return { history, saveConversation, deleteConversation, renameConversation, togglePin, clearHistory, importHistory, replaceHistory, createNewId }
 }

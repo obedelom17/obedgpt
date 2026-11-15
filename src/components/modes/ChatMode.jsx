@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useMemo } from 'react'
-import { Send, RotateCcw, Mic, RefreshCw, Square, Pencil, Check, Download, Printer, ArrowDown, ArrowRight, Copy, Lightbulb, BookOpen, Code2, Sparkles, Volume2, X, Slash, SlidersHorizontal, ImagePlus, Globe, Terminal, Wrench, Brain, ChevronDown, ExternalLink, Loader2, Braces, Share2, FileText } from 'lucide-react'
+import { Send, RotateCcw, Mic, RefreshCw, ChevronLeft, ChevronRight, Square, Pencil, Check, Download, Printer, ArrowDown, ArrowRight, Copy, Lightbulb, BookOpen, Code2, Sparkles, Volume2, X, Slash, SlidersHorizontal, ImagePlus, Globe, Terminal, Wrench, Brain, ChevronDown, ExternalLink, Loader2, Braces, Share2, FileText } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import Logo from '../Logo'
 import { MarkdownRenderer, ErrorBanner, ThinkingSkeleton } from '../ui'
@@ -327,9 +327,31 @@ export default function ChatMode() {
     while (end > 0 && messages[end - 1].role === 'assistant') end--
     const trimmed = messages.slice(0, end)
     if (trimmed.length === 0) return
+    const prevMsg = messages[messages.length - 1]
+    const { alts: prevAlts = [], altIdx: _i, ...prevFields } = prevMsg
     setMessages(trimmed)
     await sendFromMessages(trimmed)
+    // Garde l'ancienne réponse comme variante (ou la restaure si la génération a échoué)
+    setMessages(cur => {
+      const last = cur[cur.length - 1]
+      if (cur.length === trimmed.length + 1 && last?.role === 'assistant' && last.content) {
+        const alts = [...prevAlts, prevFields].slice(-5)
+        return [...cur.slice(0, -1), { ...last, alts, altIdx: alts.length }]
+      }
+      if (cur.length === trimmed.length) return [...cur, prevMsg]
+      return cur
+    })
   }
+
+  // Bascule vers une autre variante de la réponse i (l'actuelle prend sa place dans la liste)
+  const switchAlt = (i, k) => setMessages(cur => cur.map((m, j) => {
+    if (j !== i || !m.alts?.length) return m
+    const { alts, altIdx, ...rest } = m
+    const all = alts.slice(); all.splice(altIdx, 0, rest)
+    if (k < 0 || k >= all.length) return m
+    const [chosen] = all.splice(k, 1)
+    return { ...chosen, alts: all, altIdx: k }
+  }))
 
   const startEdit = (i) => { if (loading) return; setEditingIndex(i); setEditValue(messages[i].content) }
   const cancelEdit = () => { setEditingIndex(null); setEditValue('') }
@@ -490,6 +512,13 @@ export default function ChatMode() {
                       <button onClick={() => toggleSpeak(i, msg.content)} aria-label={speakingIdx === i ? 'Arrêter la lecture' : 'Lire à voix haute'} aria-pressed={speakingIdx === i} className="mini-action">
                         {speakingIdx === i ? (speakState === 'loading' ? <Loader2 size={12} className="animate-spin" /> : <Square size={11} fill="currentColor" />) : <Volume2 size={12} />} {speakingIdx === i ? 'Arrêter' : 'Écouter'}
                       </button>
+                      {msg.alts?.length > 0 && (
+                        <span className="alt-nav" role="group" aria-label="Variantes de la réponse">
+                          <button onClick={() => switchAlt(i, msg.altIdx - 1)} disabled={msg.altIdx === 0 || loading} aria-label="Variante précédente"><ChevronLeft size={13} /></button>
+                          <span>{msg.altIdx + 1}/{msg.alts.length + 1}</span>
+                          <button onClick={() => switchAlt(i, msg.altIdx + 1)} disabled={msg.altIdx === msg.alts.length || loading} aria-label="Variante suivante"><ChevronRight size={13} /></button>
+                        </span>
+                      )}
                       {isLast && lastIsAssistant && <button onClick={regenerate} aria-label="Régénérer cette réponse" className="mini-action"><RefreshCw size={12} /> Régénérer</button>}
                       <button onClick={() => setShareOpen({ messages: messages.slice(Math.max(0, i - 1), i + 1), scope: 'one' })} aria-label="Partager cet échange" className="mini-action"><Share2 size={12} /> Partager</button>
                       {msg.ms != null && <span className="meta-time" title="Durée de génération">{fmtMs(msg.ms)}</span>}

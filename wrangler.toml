@@ -10,3 +10,9 @@ compatibility_flags = ["nodejs_compat"]
 #
 # Secrets (à ne PAS écrire ici) :
 #   npx wrangler pages secret put GROQ_API_KEYS --project-name obedgpt
+
+# Comptes + historique serveur (facultatif) : crée un namespace KV puis lie-le.
+#   npx wrangler kv namespace create AUTH_KV
+# [[kv_namespaces]]
+# binding = "AUTH_KV"
+# id = "<id affiché par la commande>"
