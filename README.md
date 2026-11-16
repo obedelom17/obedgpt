@@ -114,26 +114,32 @@ npm run cf:deploy
 
 Notes : l'offre gratuite limite le temps CPU à 10 ms par requête (le streaming et l'attente de Groq ne comptent pas) ; si `transcribe` ou `agent` dépassent, passe au plan Workers payant. `GROQ_BASE_URL` permet de passer par Cloudflare AI Gateway (cache, journaux, limites). Les limites de débit par IP sont en mémoire par instance : pour une vraie protection, ajoute une règle de rate limiting Cloudflare sur `/api/*`.
 
-## Comptes et historique serveur (facultatif)
+## Architecture
 
-1. `npx wrangler kv namespace create AUTH_KV`, puis lier le namespace au projet Pages (Settings, Bindings, KV) sous le nom `AUTH_KV`.
-2. Secret `JWT_SECRET` : `openssl rand -base64 32`.
-3. Sans KV, Upstash Redis (`UPSTASH_REDIS_REST_URL` / `_TOKEN`) sert de stockage.
-4. Sans `JWT_SECRET`, les routes `/api/auth` et `/api/sync` répondent 503 et l'app reste 100 % locale.
-- Mots de passe : PBKDF2-SHA256. Réduire `PBKDF2_ITERATIONS` si le plan gratuit dépasse la limite CPU.
-- Pas de réinitialisation de mot de passe ni de vérification d'e-mail.
+```mermaid
+flowchart LR
+  U[Navigateur<br/>React + Vite + Tailwind] -->|/api/*| F[Cloudflare Pages Functions<br/>adaptateur req/res]
+  F --> G[Groq<br/>chat, vision, Whisper, Orpheus, Compound]
+  F --> W[Workers AI<br/>FLUX.1 schnell]
+  F -.optionnel.-> K[(Upstash / KV<br/>liens courts, compteurs)]
+  U --- L[(localStorage + IndexedDB<br/>historique, documents, galerie)]
+```
+
+Aucun compte : tout l'état utilisateur reste dans le navigateur. Les clés Groq ne quittent jamais le serveur.
+
+![Accueil](docs/screens/accueil.png)
+![Conversation](docs/screens/chat.png)
 
 ## Qualité et suivi
 
-- `npm test` : 16 tests (fusion d'historique, JWT, mots de passe, routes comptes, DSN). CI : `.github/workflows/ci.yml`.
+- `npm test` : tests unitaires et API. `npm run e2e` : test de bout en bout dans un vrai Chromium (build de production, CSP appliquée, API simulée). CI : `.github/workflows/ci.yml`.
+- Lighthouse mobile (build local) : performance 93, accessibilité 100, bonnes pratiques 96, SEO 100.
+- Sonde de surveillance : `GET /api/health` répond 503 si Groq est injoignable, si le modèle par défaut est retiré ou s'il n'existe plus de modèle vision. À brancher sur UptimeRobot (gratuit).
 - Sentry (facultatif) : variable de BUILD `VITE_SENTRY_DSN`. Aucun SDK ajouté.
+- En-têtes de sécurité et CSP : `public/_headers`. Page de confidentialité : `public/privacy.html`.
 - Limite globale 120 requêtes/min/IP dans `functions/api/[[route]].js`. Ajouter une règle WAF « Rate limiting » dans le dashboard Cloudflare pour une limite partagée entre instances.
 - Raccourcis : Ctrl K, Ctrl B, Ctrl Maj O, Alt 1 à 5, Ctrl /.
 
-## Modèles Groq (déprécations 2026)
-
-Llama 4 Scout/Maverick, qwen3-32b, llama-3.1-8b-instant, llama-3.3-70b et compound-mini sont retirés. Vision : `qwen/qwen3.6-27b` (3 images max, Preview). Variable `GROQ_VISION_MODEL` pour imposer un autre modèle.
-
 ## Génération d'images
 
-`/image <description>` (ou le bouton pinceau). Cloudflare Workers AI, modèle FLUX.1 schnell, binding `AI` déclaré dans `wrangler.toml`. Plan gratuit : 10 000 neurones/jour pour tout le compte. Limite par IP : 8 images/jour (`IMAGE_DAILY_LIMIT`). Images non sauvegardées dans l'historique.
+`une demande naturelle (« génère une image de... ») ou `/image <description>` (ou le bouton pinceau). Réglage « Images automatiques » dans le panneau Groq. Cloudflare Workers AI, modèle FLUX.1 schnell, binding `AI` déclaré dans `wrangler.toml`. Plan gratuit : 10 000 neurones/jour pour tout le compte. Limite par IP : 8 images/jour (`IMAGE_DAILY_LIMIT`). Images conservées dans la galerie (IndexedDB, 60 max).

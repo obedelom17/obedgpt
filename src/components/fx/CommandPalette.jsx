@@ -1,13 +1,15 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Search, MessageSquare, Code2, Volume2, Wand2, Cpu, Settings as SettingsIcon, Plus, Sun, Moon, Flame, MessagesSquare, CornerDownLeft, PanelLeft, Palette } from 'lucide-react'
+import { Search, MessageSquare, Code2, Volume2, Wand2, Cpu, Settings as SettingsIcon, Plus, Sun, Moon, Flame, MessagesSquare, CornerDownLeft, PanelLeft, Palette, Download as DownloadIcon } from 'lucide-react'
+import { useInstall, promptInstall } from '../../lib/install'
 import { useApp } from '../../App'
 import { useTheme, ACCENTS } from '../../hooks/useTheme.jsx'
 import { useLang } from '../../i18n'
 
 // Palette de commandes : Ctrl/Cmd + K.
 export default function CommandPalette({ open, onClose }) {
-  const { setActiveMode, startNewChat, openConversation, history, tempMode, setTempMode, toggleSidebar, openShortcuts } = useApp()
+  const inst = useInstall()
+  const { setActiveMode, startNewChat, openConversation, history, tempMode, setTempMode, toggleSidebar, openShortcuts, openGallery } = useApp()
   const { theme, setThemePref, setAccent } = useTheme()
   const [lang, setLang] = useLang()
   const [q, setQ] = useState('')
@@ -21,6 +23,8 @@ export default function CommandPalette({ open, onClose }) {
       { id: 'temp', group: 'Actions', label: tempMode ? 'Désactiver le mode temporaire' : 'Activer le mode temporaire', icon: Flame, run: () => setTempMode(!tempMode) },
       { id: 'side', group: 'Actions', label: 'Afficher ou masquer la barre latérale', icon: PanelLeft, run: () => toggleSidebar() },
       { id: 'keys', group: 'Actions', label: 'Raccourcis clavier', icon: CornerDownLeft, run: () => openShortcuts() },
+      { id: 'gallery', group: 'Actions', label: "Galerie d'images", icon: Palette, run: () => openGallery() },
+      ...(inst.canPrompt ? [{ id: 'install', group: 'Actions', label: "Installer l'application", icon: DownloadIcon, run: () => promptInstall() }] : []),
       { id: 'lang', group: 'Apparence', label: lang === 'en' ? 'Passer en français' : 'Switch to English', icon: Palette, run: () => setLang(lang === 'en' ? 'fr' : 'en') },
       { id: 'theme', group: 'Apparence', label: theme === 'dark' ? 'Passer en thème clair' : 'Passer en thème sombre', icon: theme === 'dark' ? Sun : Moon, run: () => setThemePref(theme === 'dark' ? 'light' : 'dark') },
       ...ACCENTS.map(a => ({ id: 'acc-' + a.id, group: 'Apparence', label: `Accent ${a.label.toLowerCase()}`, icon: Palette, run: () => setAccent(a.id) })),
@@ -35,7 +39,7 @@ export default function CommandPalette({ open, onClose }) {
     const all = [...base, ...convs]
     const s = q.trim().toLowerCase()
     return s ? all.filter(i => i.label.toLowerCase().includes(s)) : all.slice(0, 16)
-  }, [q, history, theme, lang, setLang, tempMode, startNewChat, setActiveMode, openConversation, setThemePref, setAccent, setTempMode, toggleSidebar, openShortcuts])
+  }, [q, history, theme, lang, setLang, tempMode, startNewChat, setActiveMode, openConversation, setThemePref, setAccent, setTempMode, toggleSidebar, openShortcuts, openGallery, inst.canPrompt])
 
   useEffect(() => { if (open) { setQ(''); setSel(0); setTimeout(() => inputRef.current?.focus(), 40) } }, [open])
   useEffect(() => { setSel(0) }, [q])

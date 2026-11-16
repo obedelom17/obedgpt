@@ -8,15 +8,12 @@ export default defineConfig({
   plugins: [react({ jsxImportSource: 'obedgpt-i18n' })],
   resolve: { alias: { 'obedgpt-i18n': fileURLToPath(new URL('./src/i18n', import.meta.url)) } },
   build: {
-    // Le bundle principal dépassait 1.4MB : on sépare les grosses
-    // dépendances tierces dans leurs propres chunks, mis en cache
-    // indépendamment du code de l'app (qui, lui, change souvent).
+    // React est isolé (mis en cache). Markdown, KaTeX et la coloration de code restent
+    // des chunks asynchrones : chargés au premier message seulement.
     rollupOptions: {
       output: {
         manualChunks: {
           'vendor-react': ['react', 'react-dom'],
-          'vendor-markdown': ['react-markdown', 'remark-gfm', 'remark-math', 'rehype-raw', 'rehype-sanitize', 'rehype-katex', 'katex'],
-          'vendor-highlighter': ['react-syntax-highlighter'],
         },
       },
     },

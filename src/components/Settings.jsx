@@ -5,7 +5,7 @@ import { Check, User, Download, Upload, Sun, Moon, Monitor, Mail, Github } from 
 import { useApp } from '../App'
 import { useTheme, ACCENTS } from '../hooks/useTheme.jsx'
 import Logo from './Logo'
-import AccountPanel from './account/AccountPanel'
+import { useInstall, promptInstall } from '../lib/install'
 
 const PERSONA_KEY = 'obedgpt-persona'
 const CHANGELOG = [
@@ -42,6 +42,7 @@ function resizeImage(file, maxSize = 256) {
 }
 
 export default function Settings() {
+  const inst = useInstall()
   const [lang, setLang] = useLang()
   const { history, clearHistory, importHistory } = useApp()
   const { themePref, setThemePref, fontSize, setFontSize, accent, setAccent } = useTheme()
@@ -210,12 +211,7 @@ export default function Settings() {
         </section>
 
         <section className="row">
-          <div><h3>Compte</h3><p className="desc">Synchronise ton historique entre appareils. Facultatif : sans compte, tout reste dans ce navigateur.</p></div>
-          <AccountPanel />
-        </section>
-
-        <section className="row">
-          <div><h3>Historique</h3><p className="desc">Les conversations vivent dans ce navigateur (et sur ton compte si tu es connecté). Exporte-les pour une copie.</p></div>
+          <div><h3>Historique</h3><p className="desc">Les conversations ne vivent que dans ce navigateur. Exporte-les pour les retrouver sur un autre appareil.</p></div>
           <div>
             <p className="text-sm mb-3"><span className="font-mono text-accent">{history.length}</span> conversation{history.length !== 1 ? 's' : ''} sauvegardée{history.length !== 1 ? 's' : ''}</p>
             <div className="flex gap-2 flex-wrap">
@@ -247,6 +243,9 @@ export default function Settings() {
             <div className="flex gap-2 flex-wrap">
               <a href="mailto:agbebaviobedelom@gmail.com?subject=Feedback%20ObedGPT" aria-label="Envoyer un feedback par e-mail" className="btn-ghost"><Mail size={14} /> Feedback</a>
               <a href="https://github.com/obedelom17/obedgpt" target="_blank" rel="noopener noreferrer" aria-label="Voir le code source sur GitHub" className="btn-ghost"><Github size={14} /> Code source</a>
+              {inst.canPrompt && <button onClick={() => promptInstall()} className="btn-ghost">Installer l'application</button>}
+              {inst.standalone && <span className="text-xs text-ink3">Application installée</span>}
+              <a href="/privacy.html" target="_blank" rel="noopener" className="btn-ghost">Confidentialité</a>
             </div>
           </div>
         </section>

@@ -30,7 +30,7 @@ export default function Onboarding() {
           </AnimatePresence>
           <div className="flex justify-center gap-1.5 my-6" aria-hidden="true">{STEPS.map((_, k) => <span key={k} style={{ width: k === i ? 18 : 6, height: 6, borderRadius: 6, background: k === i ? 'var(--accent)' : 'var(--border-strong)', transition: 'width .25s' }} />)}</div>
           <div className="flex items-center justify-between">
-            <button onClick={done} className="text-xs text-ink3 hover:text-ink">Passer</button>
+            <button onClick={done} className="text-xs text-ink2 hover:text-ink">Passer</button>
             <button onClick={() => (last ? done() : setI(i + 1))} className="btn-primary">{last ? 'Commencer' : 'Suivant'} <ArrowRight size={14} /></button>
           </div>
         </div>

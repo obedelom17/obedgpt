@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Copy, Share2, Loader2, ShieldCheck, AlertTriangle } from 'lucide-react'
-import { Modal } from '../ui/CodeBlock'
+import { Modal } from '../ui/Modal'
 import { Seg } from '../ui/controls'
 import { encodeShare, shareUrl, createShortLink } from '../../lib/share'
 import { useToast } from '../fx/Toast'

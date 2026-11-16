@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react'
 import { FileText, FileSpreadsheet, Presentation, Image as ImageIcon, Upload, Trash2, Loader2, ShieldCheck } from 'lucide-react'
-import { Modal } from '../ui/CodeBlock'
+import { Modal } from '../ui/Modal'
 import { Seg, Switch } from '../ui/controls'
 import { DOC_ACCEPT } from '../../lib/docs/extract'
 import { docChars } from '../../lib/docs/rag'

@@ -1,6 +1,6 @@
-// Stockage clé/valeur commun : Cloudflare KV (binding AUTH_KV) en priorité,
+// Stockage clé/valeur commun : Cloudflare KV (binding STORE_KV) en priorité,
 // sinon Upstash Redis (UPSTASH_REDIS_REST_URL / _TOKEN). Même interface des deux côtés.
-const kv = () => globalThis.__CF_ENV?.AUTH_KV
+const kv = () => globalThis.__CF_ENV?.STORE_KV
 const upUrl = () => process.env.UPSTASH_REDIS_REST_URL
 const upTok = () => process.env.UPSTASH_REDIS_REST_TOKEN
 

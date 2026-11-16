@@ -1,7 +1,7 @@
 {
   "name": "ObedGPT — Assistant IA",
   "short_name": "ObedGPT",
-  "description": "Assistant IA propulsé par Groq : chat, code et synthèse vocale.",
+  "description": "Assistant IA gratuit : chat, code, voix, documents et images.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
@@ -83,5 +83,21 @@
     "productivity",
     "education",
     "utilities"
+  ],
+  "screenshots": [
+    {
+      "src": "/screenshots/wide.png?v=1",
+      "sizes": "1280x720",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "ObedGPT sur ordinateur"
+    },
+    {
+      "src": "/screenshots/narrow.png?v=1",
+      "sizes": "540x960",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "ObedGPT sur mobile"
+    }
   ]
 }

@@ -1,11 +1,4 @@
-import { useState, useEffect } from 'react'
-import ReactMarkdown from 'react-markdown'
-import remarkGfm from 'remark-gfm'
-import remarkMath from 'remark-math'
-import rehypeRaw from 'rehype-raw'
-import rehypeKatex from 'rehype-katex'
-import rehypeSanitize, { defaultSchema } from 'rehype-sanitize'
-import CodeBlock from './CodeBlock'
+import { useState, useEffect, lazy, Suspense } from 'react'
 import { Copy, Check, X, AlertTriangle, Clock, WifiOff, KeyRound, FileX, Cpu } from 'lucide-react'
 import { useTheme } from '../../hooks/useTheme.jsx'
 import { useToast } from '../fx/Toast'
@@ -43,7 +36,7 @@ export function classifyError(input) {
 const ERROR_CONFIG = {
   '429':    { icon: Clock,         tone: 'warn',   title: 'Trop de requêtes',            body: 'Patiente quelques secondes, puis réessaie.', retryable: true },
   '503':    { icon: WifiOff,       tone: 'warn',   title: 'Service surchargé',           body: 'Forte demande en ce moment. Nouvelle tentative possible dans quelques secondes.', retryable: true },
-  'auth':   { icon: KeyRound,      tone: 'danger', title: 'Clé Groq manquante ou invalide', body: 'Vérifie GROQ_API_KEYS dans Vercel (Settings > Environment Variables).', retryable: false },
+  'auth':   { icon: KeyRound,      tone: 'danger', title: 'Clé Groq manquante ou invalide', body: 'Vérifie la variable GROQ_API_KEYS dans Cloudflare (Settings > Variables and Secrets).', retryable: false },
   '413':    { icon: FileX,         tone: 'danger', title: 'Message trop volumineux',     body: 'Réduis la taille du message ou du texte envoyé.', retryable: false },
   'quota':  { icon: AlertTriangle, tone: 'danger', title: 'Quota journalier atteint',    body: 'Limite gratuite atteinte. Réessaie demain.', retryable: false },
   'context':{ icon: Cpu,           tone: 'warn',   title: 'Conversation trop longue',    body: 'Fenêtre de contexte dépassée. Commence une nouvelle conversation.', retryable: false },
@@ -88,36 +81,14 @@ export function CopyButton({ code, label = true }) {
   )
 }
 
-// Schéma de nettoyage : le HTML « inoffensif » (br, details, tableaux...) reste
-// autorisé, mais scripts, iframes, gestionnaires d'évènements et styles en ligne
-// sont retirés. Indispensable pour les conversations partagées par lien.
-const SCHEMA = {
-  ...defaultSchema,
-  attributes: {
-    ...defaultSchema.attributes,
-    code: [...(defaultSchema.attributes?.code || []), ['className', /^language-./, 'math-inline', 'math-display']],
-    div: [...(defaultSchema.attributes?.div || []), ['className', 'math', 'math-display']],
-    span: [...(defaultSchema.attributes?.span || []), ['className', 'math', 'math-inline']],
-  },
-}
-
+// Rendu Markdown chargé à la demande : react-markdown, KaTeX et la coloration de code (~1,3 Mo)
+// ne sont téléchargés qu'au premier message affiché. L'écran d'accueil reste léger.
+const MarkdownLazy = lazy(() => import('./Markdown'))
 export function MarkdownRenderer({ content }) {
   return (
-    <div className="prose-obedgpt">
-      <ReactMarkdown
-        remarkPlugins={[remarkGfm, remarkMath]}
-        rehypePlugins={[rehypeRaw, [rehypeSanitize, SCHEMA], rehypeKatex]}
-        components={{
-          code({ node, inline, className, children, ...props }) {
-            const match = /language-([\w-]+)/.exec(className || '')
-            const lang = (match?.[1] || '').toLowerCase()
-            const code = String(children).replace(/\n$/, '')
-            if (!inline && (match || code.includes('\n'))) return <CodeBlock lang={lang} code={code} htmlProps={props} />
-            return <code className={className} {...props}>{children}</code>
-          },
-        }}
-      >{content}</ReactMarkdown>
-    </div>
+    <Suspense fallback={<div className="prose-obedgpt"><p className="whitespace-pre-wrap">{content}</p></div>}>
+      <MarkdownLazy content={content} />
+    </Suspense>
   )
 }
 

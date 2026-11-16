@@ -10,6 +10,7 @@ export const DEFAULT_PREFS = {
   webSearch: false,     // Compound : recherche web
   codeExec: false,      // Compound : exécution Python
   agent: false,         // function calling + MCP
+  autoImage: true,      // « génère une image de... » lance la génération sans taper /image
   jsonMode: false,
   autoSpeak: false,     // lire chaque réponse à voix haute
   ttsEngine: 'auto',    // auto | groq | browser

@@ -3,6 +3,7 @@ import ReactDOM from 'react-dom/client'
 import App from './App.jsx'
 import ErrorBoundary from './components/ErrorBoundary.jsx'
 import { initMonitor } from './lib/monitor'
+import './lib/install'
 import './index.css'
 import 'katex/dist/katex.min.css'
 

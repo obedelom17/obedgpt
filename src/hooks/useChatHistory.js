@@ -1,8 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
-import { markDeleted } from '../lib/account'
 
 const STORAGE_KEY = 'obedgpt-chat-history'
-const MAX_STORED_CONVERSATIONS = 50
+const MAX_STORED_CONVERSATIONS = 100
 
 function generateId() {
   return Date.now().toString(36) + Math.random().toString(36).slice(2, 9)
@@ -22,8 +21,16 @@ export function useChatHistory() {
     }
   })
 
+  // Si le navigateur manque de place, on retire les conversations les plus anciennes non épinglées
+  // du stockage (jamais de perte silencieuse de la conversation en cours).
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(history))
+    let list = history
+    for (let i = 0; i < 80; i++) {
+      try { localStorage.setItem(STORAGE_KEY, JSON.stringify(list)); return } catch {}
+      const idx = list.map((c, k) => [c, k]).filter(([c]) => !c.pinned).pop()?.[1]
+      if (idx == null) return
+      list = list.filter((_, k) => k !== idx)
+    }
   }, [history])
 
   const saveConversation = useCallback((id, title, messages) => {
@@ -38,7 +45,6 @@ export function useChatHistory() {
   }, [])
 
   const deleteConversation = useCallback((id) => {
-    markDeleted(id)
     setHistory(prev => prev.filter(c => c.id !== id))
   }, [])
 
@@ -51,7 +57,7 @@ export function useChatHistory() {
   }, [])
 
   const clearHistory = useCallback(() => {
-    setHistory(prev => { prev.forEach(c => markDeleted(c.id)); return [] })
+    setHistory([])
   }, [])
 
   // Fusionne un historique importé (export JSON précédent) avec l'existant :

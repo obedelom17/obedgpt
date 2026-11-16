@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { motion } from 'framer-motion'
-import { Globe, Terminal, Wrench, Braces, Volume2, Brain, X } from 'lucide-react'
+import { Globe, Terminal, Wrench, Braces, Volume2, Brain, X, Paintbrush } from 'lucide-react'
 import { usePrefs } from '../../lib/prefs'
 import { fetchModels } from '../../lib/api'
 import { Seg, Switch, Field } from '../ui/controls'
@@ -44,6 +44,7 @@ export default function GenerationPanel({ onClose }) {
           </Field>
           <Switch icon={Globe} label="Recherche web" hint="Compound cherche et lit des pages en direct, avec sources." checked={p.webSearch} onChange={v => set({ webSearch: v, agent: v ? false : p.agent })} />
           <Switch icon={Terminal} label="Exécuter du code" hint="Python exécuté côté Groq pour calculer et vérifier." checked={p.codeExec} onChange={v => set({ codeExec: v, agent: v ? false : p.agent })} />
+          <Switch icon={Paintbrush} label="Images automatiques" hint="Une demande comme « génère une image de... » crée l'image sans taper /image." checked={p.autoImage} onChange={v => set({ autoImage: v })} />
           <Switch icon={Wrench} label="Agent : outils et MCP" hint="Calculatrice, dates, conversions, serveurs MCP (Studio)." checked={p.agent} onChange={v => set({ agent: v, webSearch: v ? false : p.webSearch, codeExec: v ? false : p.codeExec })} />
           <Switch icon={Braces} label="Réponse en JSON" hint="Force un objet JSON valide." checked={p.jsonMode} onChange={v => set({ jsonMode: v })} />
           <Switch icon={Volume2} label="Lire les réponses" hint="Voix Groq Orpheus (anglais) ou voix du navigateur." checked={p.autoSpeak} onChange={v => set({ autoSpeak: v })} />

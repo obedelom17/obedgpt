@@ -9,7 +9,8 @@ import { MotionConfig, AnimatePresence, motion } from 'framer-motion'
 import CommandPalette from './components/fx/CommandPalette'
 import Shortcuts from './components/fx/Shortcuts'
 import Onboarding from './components/fx/Onboarding'
-import { useSync } from './hooks/useSync'
+import InstallPrompt from './components/fx/InstallPrompt'
+import Gallery from './components/chat/Gallery'
 import { ToastProvider } from './components/fx/Toast'
 import SharedView from './components/SharedView'
 import { useLang } from './i18n'
@@ -78,7 +79,7 @@ export default function App() {
   const [busy, setBusy] = useState(false)
   const [paletteOpen, setPaletteOpen] = useState(false)
   const [shortcutsOpen, setShortcutsOpen] = useState(false)
-  const syncStatus = useSync(historyManager.history, historyManager.replaceHistory)
+  const [galleryOpen, setGalleryOpen] = useState(false)
 
   // Ctrl/Cmd + K : palette de commandes
   useEffect(() => {
@@ -138,7 +139,7 @@ export default function App() {
     startNewChat, openConversation,
     tempMode, setTempMode,
     sidebarOpen, setSidebarOpen,
-    busy, setBusy, openPalette: () => setPaletteOpen(true), openShortcuts: () => setShortcutsOpen(true), syncStatus,
+    busy, setBusy, openPalette: () => setPaletteOpen(true), openShortcuts: () => setShortcutsOpen(true), openGallery: () => setGalleryOpen(true),
     sidebarCollapsed, toggleSidebar,
     history: historyManager.history,
     saveConversation: historyManager.saveConversation,
@@ -147,7 +148,6 @@ export default function App() {
     togglePin: historyManager.togglePin,
     clearHistory: historyManager.clearHistory,
     importHistory: historyManager.importHistory,
-    replaceHistory: historyManager.replaceHistory,
   }
 
   return (
@@ -176,7 +176,9 @@ export default function App() {
           </div>
           <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} />
           <Shortcuts open={shortcutsOpen} onClose={() => setShortcutsOpen(false)} />
+          <Gallery open={galleryOpen} onClose={() => setGalleryOpen(false)} />
           <Onboarding />
+          <InstallPrompt />
           </>)}
          </MotionConfig>
         </AppContext.Provider>

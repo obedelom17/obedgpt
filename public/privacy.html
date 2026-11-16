@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Confidentialité — ObedGPT</title>
+<meta name="robots" content="noindex" />
+<style>
+  :root { color-scheme: light dark; --bg: #f1f4f0; --fg: #121714; --mut: #4b5a52; --ac: #2d6a4f; --line: #d7ddd5 }
+  @media (prefers-color-scheme: dark) { :root { --bg: #070b09; --fg: #e8efe9; --mut: #9fb0a5; --ac: #e8a317; --line: #22302a } }
+  body { margin: 0; background: var(--bg); color: var(--fg); font: 16px/1.65 system-ui, -apple-system, 'Segoe UI', sans-serif }
+  main { max-width: 720px; margin: 0 auto; padding: 2.5rem 1.25rem 4rem }
+  h1 { font-size: 1.8rem; margin: 0 0 .25rem } h2 { font-size: 1.1rem; margin: 2rem 0 .4rem; color: var(--ac) }
+  p, li { color: var(--fg) } .mut { color: var(--mut); font-size: .9rem } a { color: var(--ac) }
+  table { width: 100%; border-collapse: collapse; font-size: .92rem; margin-top: .6rem } td, th { text-align: left; padding: .5rem .6rem; border-bottom: 1px solid var(--line); vertical-align: top }
+</style>
+</head>
+<body>
+<main>
+  <p><a href="/">← Retour à ObedGPT</a></p>
+  <h1>Confidentialité et conditions d'utilisation</h1>
+  <p class="mut">Dernière mise à jour : novembre 2026. ObedGPT est un projet développé par Obed Elom AGBEBAVI (IAI-Togo, Lomé).</p>
+
+  <h2>En résumé</h2>
+  <ul>
+    <li>Aucun compte, aucune publicité, aucun cookie de suivi.</li>
+    <li>Ton historique, tes réglages, tes documents et tes images générées restent dans ton navigateur.</li>
+    <li>Ce que tu écris est envoyé à des services d'IA tiers pour obtenir une réponse (voir ci-dessous). N'y mets pas de données sensibles ou confidentielles.</li>
+  </ul>
+
+  <h2>Où vont tes données</h2>
+  <table>
+    <tr><th>Fonction</th><th>Données envoyées</th><th>Destinataire</th></tr>
+    <tr><td>Chat, code, outils</td><td>Messages, images jointes, extraits de documents</td><td>Groq (traitement du texte et des images)</td></tr>
+    <tr><td>Dictée et voix</td><td>Enregistrement audio</td><td>Groq (transcription Whisper, voix Orpheus)</td></tr>
+    <tr><td>Image générée (/image)</td><td>Description de l'image</td><td>Groq (traduction du prompt), Cloudflare Workers AI (génération)</td></tr>
+    <tr><td>Lien de partage court</td><td>La conversation partagée, 30 jours</td><td>Upstash Redis, seulement si tu crées un lien court. Le lien long (#s=) ne stocke rien : la conversation est dans l'adresse.</td></tr>
+    <tr><td>Hébergement</td><td>Adresse IP, requêtes techniques</td><td>Cloudflare</td></tr>
+    <tr><td>Polices</td><td>Adresse IP</td><td>Google Fonts</td></tr>
+    <tr><td>Rapports d'erreurs</td><td>Message d'erreur technique, page visitée, sans contenu de conversation</td><td>Sentry, seulement si activé par l'éditeur</td></tr>
+  </table>
+  <p class="mut">Les documents (PDF, Word, Excel…) sont lus dans ton navigateur ; seuls les passages utiles à ta question sont envoyés au modèle. Chaque fournisseur applique sa propre politique de confidentialité.</p>
+
+  <h2>Ce qui est stocké dans ton navigateur</h2>
+  <p>Historique des conversations, préférences, documents importés (IndexedDB) et galerie d'images. Rien de tout cela n'est envoyé à un compte, car il n'en existe pas. Tu peux tout effacer : Paramètres → Historique → « Tout effacer », ou vider les données du site dans ton navigateur.</p>
+
+  <h2>Adresse IP</h2>
+  <p>Ton adresse IP sert à limiter les abus (nombre de requêtes par minute, nombre d'images par jour). Ces compteurs sont gardés en mémoire du serveur et, si un stockage clé/valeur est configuré, jusqu'à 24 heures.</p>
+
+  <h2>Limites du service</h2>
+  <ul>
+    <li>Les réponses de l'IA peuvent contenir des erreurs. Vérifie les informations importantes : santé, droit, finance, examens.</li>
+    <li>Le service est gratuit, sans garantie de disponibilité. Les quotas des fournisseurs peuvent l'interrompre.</li>
+    <li>N'utilise pas ObedGPT pour produire des contenus illégaux, haineux ou portant atteinte à autrui.</li>
+    <li>Les images générées sont créées par une IA : ne les présente pas comme des photos réelles.</li>
+  </ul>
+
+  <h2>Tes droits et contact</h2>
+  <p>Pour toute question ou demande de suppression d'un lien de partage : <a href="mailto:agbebaviobedelom@gmail.com">agbebaviobedelom@gmail.com</a>.</p>
+</main>
+</body>
+</html>

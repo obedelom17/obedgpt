@@ -6,6 +6,8 @@ import { Copy, Check, Maximize2, X, Download, Code2, Eye, Smartphone, Tablet, Mo
 import { useTheme } from '../../hooks/useTheme.jsx'
 import { useToast } from '../fx/Toast'
 import { downloadText } from '../../lib/audio'
+import { Modal } from './Modal'
+export { Modal }
 
 // ───────── Mermaid (chargé à la demande : ~0 Ko tant qu'aucun diagramme) ─────────
 let mermaidPromise
@@ -24,21 +26,6 @@ async function renderMermaid(code, id, dark) {
     await mermaid.parse(code)
     return (await mermaid.render(id, code)).svg
   } finally { document.getElementById('d' + id)?.remove() }
-}
-
-export function Modal({ onClose, title, children, wide }) {
-  useEffect(() => {
-    const k = e => e.key === 'Escape' && onClose()
-    document.addEventListener('keydown', k); const prev = document.body.style.overflow; document.body.style.overflow = 'hidden'
-    return () => { document.removeEventListener('keydown', k); document.body.style.overflow = prev }
-  }, [onClose])
-  return createPortal(
-    <div className="modal-overlay" onMouseDown={e => e.target === e.currentTarget && onClose()}>
-      <div className={`modal ${wide ? 'wide' : ''}`} role="dialog" aria-modal="true" aria-label={title}>
-        <div className="modal-head"><span className="font-display font-semibold truncate">{title}</span><button className="icon-btn" onClick={onClose} aria-label="Fermer"><X size={18} /></button></div>
-        <div className="modal-body">{children}</div>
-      </div>
-    </div>, document.body)
 }
 
 function MermaidBlock({ code, dark }) {

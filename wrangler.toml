@@ -15,8 +15,7 @@ binding = "AI"
 # Secrets (à ne PAS écrire ici) :
 #   npx wrangler pages secret put GROQ_API_KEYS --project-name obedgpt
 
-# Comptes + historique serveur (facultatif) : crée un namespace KV puis lie-le.
-#   npx wrangler kv namespace create AUTH_KV
+# Stockage clé/valeur facultatif (compteurs d'images persistants) : npx wrangler kv namespace create STORE_KV
 # [[kv_namespaces]]
-# binding = "AUTH_KV"
-# id = "<id affiché par la commande>"
+# binding = "STORE_KV"
+# id = "<id>"

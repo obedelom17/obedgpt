@@ -20,6 +20,8 @@ import { postJson } from '../../lib/api'
 import { recordMic, toWavChunks, imageToDataUrls } from '../../lib/audio'
 import { transcribeBlob } from '../../lib/api'
 import { speakText } from '../../lib/speaker'
+import { detectImageIntent } from '../../lib/imageIntent'
+import { newImageId, saveImage, getImage } from '../../lib/gallery'
 
 const BASE_SYSTEM_PROMPT = "Tu es ObedGPT, un assistant IA intelligent créé par Obed Elom AGBEBAVI. Si on te demande qui t'a créé/développé, réponds que c'est Obed Elom AGBEBAVI. Réponds dans la langue de l'utilisateur. Utilise LaTeX pour les maths : $...$ inline, $$...$$ pour les blocs."
 const PERSONA_KEY = 'obedgpt-persona'
@@ -67,6 +69,24 @@ function escapeHtml(str) {
 // Texte « lisible » pour la synthèse vocale : on retire blocs de code et symboles Markdown.
 function toSpeakable(md) {
   return md.replace(/```[\s\S]*?```/g, ' (extrait de code) ').replace(/[`*_#>|~]/g, '').replace(/\[([^\]]+)\]\([^)]+\)/g, '$1').replace(/\s+/g, ' ').trim()
+}
+
+// Image générée : affichée depuis le message, ou relue depuis la galerie (IndexedDB) après rechargement.
+function GenImage({ src, id, alt, name, onText }) {
+  const [url, setUrl] = useState(src || '')
+  const [gone, setGone] = useState(false)
+  useEffect(() => { if (!src && id) getImage(id).then(r => (r?.data ? setUrl(r.data) : setGone(true))) }, [src, id])
+  if (gone) return <p className="text-sm text-ink3">Image supprimée de la galerie.</p>
+  if (!url) return <div className="skeleton-line" style={{ width: 320, height: 320, borderRadius: 16 }} />
+  return (
+    <figure className="gen-image">
+      <img src={url} alt={alt} />
+      <div className="flex gap-2 flex-wrap">
+        <a href={url} download={name} className="mini-action"><Download size={12} /> Télécharger</a>
+        {onText && <button onClick={onText} className="mini-action">Répondre par texte</button>}
+      </div>
+    </figure>
+  )
 }
 
 function RotatingPlaceholder({ hidden }) {
@@ -311,12 +331,22 @@ export default function ChatMode() {
   }
 
   // /image <description> : génération d'image (Cloudflare Workers AI)
-  const generateImage = async (prompt, list) => {
+  const generateImage = async (prompt, list, auto = false) => {
     setImgBusy(true)
     try {
       const data = await postJson('/api/image', { prompt })
-      setMessages([...list, { role: 'assistant', content: `Image générée : ${prompt}`, genImage: data.image, genPrompt: data.prompt }])
+      const genId = newImageId()
+      saveImage({ id: genId, prompt, data: data.image })
+      setMessages([...list, { role: 'assistant', content: `Image générée : ${prompt}`, genImage: data.image, genId, genPrompt: data.prompt, ...(auto ? { genAuto: true } : {}) }])
     } catch (e) { setFileError(e.message) } finally { setImgBusy(false) }
+  }
+
+  // « Ce n'était pas une demande d'image » : on relance la même question en réponse texte.
+  const answerAsText = async i => {
+    if (loading) return
+    const list = messages.slice(0, i)
+    setMessages(list)
+    await sendFromMessages(list)
   }
 
   const send = async () => {
@@ -327,6 +357,13 @@ export default function ChatMode() {
       const list = [...messages, { role: 'user', content: text }]
       setMessages(list); setInput(''); setAttachments([])
       return generateImage(gen[1].trim(), list)
+    }
+    // Demande d'image en langage naturel (sans pièce jointe ni document actif, hors mode agent)
+    const auto = prefs.autoImage && !prefs.agent && attachments.length === 0 && !(activeDocs?.length) ? detectImageIntent(text) : null
+    if (auto) {
+      const list = [...messages, { role: 'user', content: text }]
+      setMessages(list); setInput('')
+      return generateImage(auto, list, true)
     }
     speakerRef.current?.stop(); setSpeakingIdx(null)
     const imgs = attachments
@@ -495,13 +532,8 @@ export default function ChatMode() {
                                 <div className="r-body">{msg.reasoning}</div>
                               </details>
                             )}
-                            {msg.genImage && (
-                              <figure className="gen-image">
-                                <img src={msg.genImage} alt={msg.content} />
-                                <a href={msg.genImage} download={`obedgpt-image-${i}.jpg`} className="mini-action"><Download size={12} /> Télécharger</a>
-                              </figure>
-                            )}
-                            {msg.genImage ? null : msg.content ? <MarkdownRenderer content={msg.content} /> : (!msg.reasoning && <ThinkingSkeleton />)}
+                            {(msg.genImage || msg.genId) && <GenImage src={msg.genImage} id={msg.genId} alt={msg.content} name={`obedgpt-image-${i}.jpg`} onText={msg.genAuto && isLast ? () => answerAsText(i) : null} />}
+                            {msg.genImage || msg.genId ? null : msg.content ? <MarkdownRenderer content={msg.content} /> : (!msg.reasoning && <ThinkingSkeleton />)}
                             {msg.tools?.filter(t => t.code).map((t, k) => (
                               <details key={k} className="reasoning mt-3"><summary><Terminal size={14} /> Code exécuté<ChevronDown size={14} className="chev" /></summary>
                                 <div className="px-3 pb-3 pt-2 border-t" style={{ borderColor: 'var(--border)' }}><MarkdownRenderer content={'```python\n' + t.code + '\n```' + (t.output ? '\n```text\n' + t.output + '\n```' : '')} /></div>

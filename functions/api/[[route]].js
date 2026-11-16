@@ -16,8 +16,7 @@ const ROUTES = {
   tools: () => import('../../api/tools.js'),
   batch: () => import('../../api/batch.js'),
   share: () => import('../../api/share.js'),
-  auth: () => import('../../api/auth.js'),
-  sync: () => import('../../api/sync.js'),
+  health: () => import('../../api/health.js'),
   image: () => import('../../api/image.js'),
 }
 
