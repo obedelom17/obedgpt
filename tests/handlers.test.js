@@ -41,3 +41,17 @@ describe('API comptes', () => {
     expect(get.body.conversations).toHaveLength(1)
   })
 })
+
+describe('API image', () => {
+  it('503 sans binding, 200 avec un faux AI, 400 prompt trop court', async () => {
+    const { default: image } = await import('../api/image.js')
+    const saved = globalThis.__CF_ENV
+    globalThis.__CF_ENV = { AUTH_KV: saved.AUTH_KV }
+    expect((await call(image, { body: { prompt: 'un chat' } })).code).toBe(503)
+    globalThis.__CF_ENV = { ...saved, AI: { run: async () => ({ image: 'QUJD' }) } }
+    const ok = await call(image, { body: { prompt: 'un chat sur un toit' } })
+    expect(ok.code).toBe(200); expect(ok.body.image).toMatch(/^data:image\/jpeg;base64,/)
+    expect((await call(image, { body: { prompt: 'a' } })).code).toBe(400)
+    globalThis.__CF_ENV = saved
+  })
+})

@@ -18,6 +18,7 @@ const ROUTES = {
   share: () => import('../../api/share.js'),
   auth: () => import('../../api/auth.js'),
   sync: () => import('../../api/sync.js'),
+  image: () => import('../../api/image.js'),
 }
 
 // Limite globale par IP (120 requêtes/min, par instance Workers). Complète les limites par route.

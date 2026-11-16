@@ -4,6 +4,10 @@ pages_build_output_dir = "dist"
 compatibility_date = "2025-06-01"
 compatibility_flags = ["nodejs_compat"]
 
+# Workers AI : génération d'images (api/image.js)
+[ai]
+binding = "AI"
+
 # Variables non secrètes (facultatif) :
 # [vars]
 # GROQ_MODEL = "openai/gpt-oss-120b"

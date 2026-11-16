@@ -114,6 +114,13 @@ export async function getModels() {
   return modelCache
 }
 export const hasModel = (cache, id) => cache.list.some(m => m.id === id)
+// Tous les modèles vision du catalogue, du préféré au dernier recours (pour basculer si l'un est saturé).
+export function visionCandidates(cache) {
+  const forced = process.env.GROQ_VISION_MODEL
+  const v = cache.list.filter(m => m.kind === 'chat' && m.vision).map(m => m.id)
+  v.sort((a, b) => (/qwen3\.\d/i.test(b) ? 1 : 0) - (/qwen3\.\d/i.test(a) ? 1 : 0))
+  return [...new Set([forced, ...v, 'qwen/qwen3.6-27b'].filter(Boolean))]
+}
 // Modèle vision : GROQ_VISION_MODEL si défini, sinon le premier modèle vision du catalogue Groq en direct.
 // (Llama 4 Scout/Maverick sont retirés ; qwen/qwen3.6-27b accepte les images, 3 maximum.)
 export function pickVision(cache) {

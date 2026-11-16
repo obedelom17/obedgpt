@@ -133,3 +133,7 @@ Notes : l'offre gratuite limite le temps CPU à 10 ms par requête (le streaming
 ## Modèles Groq (déprécations 2026)
 
 Llama 4 Scout/Maverick, qwen3-32b, llama-3.1-8b-instant, llama-3.3-70b et compound-mini sont retirés. Vision : `qwen/qwen3.6-27b` (3 images max, Preview). Variable `GROQ_VISION_MODEL` pour imposer un autre modèle.
+
+## Génération d'images
+
+`/image <description>` (ou le bouton pinceau). Cloudflare Workers AI, modèle FLUX.1 schnell, binding `AI` déclaré dans `wrangler.toml`. Plan gratuit : 10 000 neurones/jour pour tout le compte. Limite par IP : 8 images/jour (`IMAGE_DAILY_LIMIT`). Images non sauvegardées dans l'historique.

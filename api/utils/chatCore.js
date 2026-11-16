@@ -1,4 +1,4 @@
-import { guard, fail, withKeys, groqFetch, jsonInit, readError, sendGroqError, quotaFrom, getModels, hasModel, pickVision, sanitizeMessages, clamp, sse, normalizeTools, DEFAULT_MODEL, chatOnce } from './groqCore.js'
+import { guard, fail, withKeys, groqFetch, jsonInit, readError, sendGroqError, quotaFrom, getModels, hasModel, pickVision, visionCandidates, sanitizeMessages, clamp, sse, normalizeTools, DEFAULT_MODEL, chatOnce } from './groqCore.js'
 
 // Chat complet : choix du modèle, vision, raisonnement, recherche web et
 // exécution de code (Compound), mode JSON. Flux NDJSON :
@@ -34,7 +34,8 @@ function buildPlan(body, cache) {
     if (body.json && !info?.vision) payload.response_format = { type: 'json_object' }
   }
   payload.model = model
-  return { payload, features, model }
+  const alts = images > 0 ? visionCandidates(cache).filter(m => m !== model) : []
+  return { payload, features, model, alts }
 }
 
 // Retire les options que le modèle choisi refuse (erreur 400) puis réessaie.
@@ -43,12 +44,20 @@ const strip = p => { const n = { ...p }; EXTRAS.forEach(k => delete n[k]); retur
 
 const hasImages = p => p.messages.some(m => Array.isArray(m.content) && m.content.some(c => c.type === 'image_url'))
 
-async function open(payload, signal) {
-  let p = payload
-  for (let attempt = 0; attempt < 3; attempt++) {
+const OVERLOAD = e => e?.status === 503 || /over capacity|overloaded|try again/i.test(e?.message || '')
+const sleep = ms => new Promise(r => setTimeout(r, ms))
+
+async function open(payload, signal, alts = []) {
+  let p = payload, retries = 0
+  for (let attempt = 0; attempt < 6; attempt++) {
     const { res, exhausted } = await withKeys(k => groqFetch('/chat/completions', jsonInit({ ...p, stream: true }, signal), k))
     if (res?.ok) return { up: res, payload: p }
     const err = await readError(res)
+    // Modèle saturé : on bascule sur un autre modèle vision, sinon on réessaie après une courte pause.
+    if (OVERLOAD(err) && res?.status !== 429) {
+      if (alts.length) { p = { ...p, model: alts.shift() }; continue }
+      if (retries++ < 2) { await sleep(1200 * retries); continue }
+    }
     if (res?.status === 400 && attempt === 0 && EXTRAS.some(k => k in p)) { p = strip(p); continue }
     if ([400, 404].includes(res?.status) && /decommission|not found|does not exist|no longer supported/i.test(err.message) && p.model !== DEFAULT_MODEL && !hasImages(p)) { p = { ...strip(p), model: DEFAULT_MODEL }; continue }
     return { err, exhausted }
@@ -60,7 +69,7 @@ export async function handleChat(req, res) {
   if (guard(req, res, 'chat')) return
   const body = req.body || {}
   const cache = await getModels()
-  const { payload, features, model } = buildPlan(body, cache)
+  const { payload, features, model, alts } = buildPlan(body, cache)
   if (!payload.messages.some(m => m.role === 'user')) return fail(res, 400, 'Message vide.', 'BAD_REQUEST')
 
   const ac = new AbortController()
@@ -73,7 +82,7 @@ export async function handleChat(req, res) {
     return res.status(200).json({ text: msg.content || '', reasoning: msg.reasoning || '', tools: normalizeTools(msg.executed_tools), usage: r.data.usage, model, quota: r.quota })
   }
 
-  const opened = await open(payload, ac.signal)
+  const opened = await open(payload, ac.signal, alts)
   if (opened.err) return sendGroqError(res, opened.err, opened.exhausted)
   const { up, payload: used } = opened
   res.writeHead(200, { 'Content-Type': 'application/x-ndjson; charset=utf-8', 'Cache-Control': 'no-cache, no-transform', 'X-Accel-Buffering': 'no' })

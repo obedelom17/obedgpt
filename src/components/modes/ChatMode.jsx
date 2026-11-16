@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useMemo } from 'react'
-import { Send, RotateCcw, Mic, RefreshCw, ChevronLeft, ChevronRight, Square, Pencil, Check, Download, Printer, ArrowDown, ArrowRight, Copy, Lightbulb, BookOpen, Code2, Sparkles, Volume2, X, Slash, SlidersHorizontal, ImagePlus, Globe, Terminal, Wrench, Brain, ChevronDown, ExternalLink, Loader2, Braces, Share2, FileText } from 'lucide-react'
+import { Send, RotateCcw, Mic, RefreshCw, ChevronLeft, ChevronRight, Square, Pencil, Check, Download, Printer, ArrowDown, ArrowRight, Copy, Lightbulb, BookOpen, Code2, Sparkles, Volume2, X, Slash, SlidersHorizontal, ImagePlus, Globe, Terminal, Wrench, Brain, ChevronDown, ExternalLink, Loader2, Braces, Share2, FileText, Paintbrush } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import Logo from '../Logo'
 import { MarkdownRenderer, ErrorBanner, ThinkingSkeleton } from '../ui'
@@ -43,6 +43,7 @@ const SLASH = [
   { cmd: '/expliquer', hint: 'Expliquer simplement, avec un exemple',      tpl: 'Explique simplement, avec un exemple concret :\n\n' },
   { cmd: '/corriger',  hint: 'Corriger orthographe et grammaire',          tpl: 'Corrige l\'orthographe et la grammaire sans changer le sens :\n\n' },
   { cmd: '/code',      hint: 'Écrire un programme complet',                tpl: 'Écris le code complet pour : ' },
+  { cmd: '/image',     hint: 'Générer une image (Flux)',                   tpl: '/image ' },
   { cmd: '/plan',      hint: 'Construire un plan détaillé',                tpl: 'Prépare un plan détaillé pour : ' },
 ]
 
@@ -118,13 +119,14 @@ export default function ChatMode() {
   const [transcribing, setTranscribing] = useState(false)
   const [speakState, setSpeakState] = useState('idle')
   const [agentBusy, setAgentBusy] = useState(false)
+  const [imgBusy, setImgBusy] = useState(false)
   const [agentError, setAgentError] = useState(null)
   const speakerRef = useRef(null)
   const recorderRef = useRef(null)
   const agentAbort = useRef(null)
   const fileInputRef = useRef(null)
   const { loading: streaming, error: streamError, call, retry, clearError: clearStreamError, abort: abortStream } = useStreamingChat()
-  const loading = streaming || agentBusy || preparing
+  const loading = streaming || agentBusy || preparing || imgBusy
   const error = streamError || agentError
   const clearError = () => { clearStreamError(); setAgentError(null) }
   const abort = () => { abortStream(); agentAbort.current?.abort() }
@@ -144,7 +146,7 @@ export default function ChatMode() {
   useEffect(() => {
     if (!tempMode && activeChatId && messages.length > 0) {
       const title = messages[0].content.slice(0, 50) || (messages[0].images?.length ? 'Analyse d\'image' : 'Nouvelle conversation')
-      saveConversation(activeChatId, title, messages.map(({ fullImages, ...m }) => m))
+      saveConversation(activeChatId, title, messages.map(({ fullImages, genImage, ...m }) => m))
     }
   }, [messages, activeChatId, tempMode, saveConversation])
 
@@ -308,9 +310,24 @@ export default function ChatMode() {
     await appendAssistantStreamed(h => call('/api/chat', { messages: toApiMessages(newMessages), systemPrompt, ...genOptions(), ...ctx }, h), docExtra(d))
   }
 
+  // /image <description> : génération d'image (Cloudflare Workers AI)
+  const generateImage = async (prompt, list) => {
+    setImgBusy(true)
+    try {
+      const data = await postJson('/api/image', { prompt })
+      setMessages([...list, { role: 'assistant', content: `Image générée : ${prompt}`, genImage: data.image, genPrompt: data.prompt }])
+    } catch (e) { setFileError(e.message) } finally { setImgBusy(false) }
+  }
+
   const send = async () => {
     const text = input.trim() || (attachments.length ? 'Analyse cette image.' : '')
     if (!text || loading) return
+    const gen = /^\/image\s+([\s\S]{3,})$/i.exec(text)
+    if (gen) {
+      const list = [...messages, { role: 'user', content: text }]
+      setMessages(list); setInput(''); setAttachments([])
+      return generateImage(gen[1].trim(), list)
+    }
     speakerRef.current?.stop(); setSpeakingIdx(null)
     const imgs = attachments
     const newMessages = [...messages, { role: 'user', content: text, ...(imgs.length ? { images: imgs.map(a => a.thumb), fullImages: imgs.map(a => a.full) } : {}) }]
@@ -478,7 +495,13 @@ export default function ChatMode() {
                                 <div className="r-body">{msg.reasoning}</div>
                               </details>
                             )}
-                            {msg.content ? <MarkdownRenderer content={msg.content} /> : (!msg.reasoning && <ThinkingSkeleton />)}
+                            {msg.genImage && (
+                              <figure className="gen-image">
+                                <img src={msg.genImage} alt={msg.content} />
+                                <a href={msg.genImage} download={`obedgpt-image-${i}.jpg`} className="mini-action"><Download size={12} /> Télécharger</a>
+                              </figure>
+                            )}
+                            {msg.genImage ? null : msg.content ? <MarkdownRenderer content={msg.content} /> : (!msg.reasoning && <ThinkingSkeleton />)}
                             {msg.tools?.filter(t => t.code).map((t, k) => (
                               <details key={k} className="reasoning mt-3"><summary><Terminal size={14} /> Code exécuté<ChevronDown size={14} className="chev" /></summary>
                                 <div className="px-3 pb-3 pt-2 border-t" style={{ borderColor: 'var(--border)' }}><MarkdownRenderer content={'```python\n' + t.code + '\n```' + (t.output ? '\n```text\n' + t.output + '\n```' : '')} /></div>
@@ -599,6 +622,7 @@ export default function ChatMode() {
             <button onClick={() => setDocsOpen(true)} title="Documents : PDF, Word, Excel, PowerPoint…" aria-label="Joindre un document" className="icon-btn" style={activeDocs.length ? { color: 'var(--accent)' } : undefined}><FileText size={17} /></button>
             <input ref={fileInputRef} type="file" accept="image/*" multiple hidden onChange={e => { addImages(e.target.files); e.target.value = '' }} />
             <button onClick={() => fileInputRef.current?.click()} title="Joindre une image (vision)" aria-label="Joindre une image" className="icon-btn"><ImagePlus size={17} /></button>
+            <button onClick={() => { setInput('/image '); inputRef.current?.focus() }} title="Générer une image" aria-label="Générer une image" className="icon-btn"><Paintbrush size={16} /></button>
             <button onClick={() => setPanelOpen(o => !o)} title="Réglages Groq : modèle, web, code, agent" aria-label="Ouvrir les réglages Groq" aria-expanded={panelOpen} className="icon-btn" style={panelOpen || prefs.webSearch || prefs.codeExec || prefs.agent ? { color: 'var(--accent)' } : undefined}><SlidersHorizontal size={16} /></button>
             <button onClick={() => { setInput('/'); inputRef.current?.focus() }} title="Commandes rapides" aria-label="Ouvrir les commandes rapides" className="icon-btn hidden sm:inline-grid"><Slash size={16} /></button>
             {messages.length > 0 && (
