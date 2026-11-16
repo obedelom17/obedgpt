@@ -75,6 +75,17 @@ await step('image demandée en langage naturel (sans /image) + « Répondre par 
   if (await p.$('.gen-image img')) throw new Error('image encore affichée après « Répondre par texte »')
   await p.close()
 })
+await step('formulation libre → image via classifieur', async () => {
+  const p = await freshPage()
+  await p.type('textarea', "j'aimerais bien voir à quoi ressemble un lion"); await p.keyboard.press('Enter')
+  await p.waitForSelector('.gen-image img', { timeout: 9000 }); await p.close()
+})
+await step('formulation libre non visuelle → texte', async () => {
+  const p = await freshPage()
+  await p.type('textarea', "montre la différence entre un lion et un tigre"); await p.keyboard.press('Enter')
+  await p.waitForSelector('.prose-obedgpt strong', { timeout: 10000 })
+  if (await p.$('.gen-image img')) throw new Error('image générée à tort'); await p.close()
+})
 await step('question technique : pas d\'image automatique', async () => {
   const p = await freshPage()
   await p.type('textarea', 'comment générer une image docker ?'); await p.keyboard.press('Enter')

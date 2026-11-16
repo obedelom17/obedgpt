@@ -20,7 +20,7 @@ import { postJson } from '../../lib/api'
 import { recordMic, toWavChunks, imageToDataUrls } from '../../lib/audio'
 import { transcribeBlob } from '../../lib/api'
 import { speakText } from '../../lib/speaker'
-import { detectImageIntent } from '../../lib/imageIntent'
+import { detectImageIntent, maybeImageRequest } from '../../lib/imageIntent'
 import { newImageId, saveImage, getImage } from '../../lib/gallery'
 
 const BASE_SYSTEM_PROMPT = "Tu es ObedGPT, un assistant IA intelligent créé par Obed Elom AGBEBAVI. Si on te demande qui t'a créé/développé, réponds que c'est Obed Elom AGBEBAVI. Réponds dans la langue de l'utilisateur. Utilise LaTeX pour les maths : $...$ inline, $$...$$ pour les blocs."
@@ -364,6 +364,22 @@ export default function ChatMode() {
       const list = [...messages, { role: 'user', content: text }]
       setMessages(list); setInput('')
       return generateImage(auto, list, true)
+    }
+    // Formulation libre (« j'aimerais voir à quoi ressemble un lion ») : un petit modèle tranche, seulement si le préfiltre hésite.
+    const lastImg = [...messages].reverse().find(m => m.role === 'assistant')
+    const afterImage = !!(lastImg?.genId || lastImg?.genImage)
+    if (prefs.autoImage && !prefs.agent && attachments.length === 0 && !(activeDocs?.length) && maybeImageRequest(text, { afterImage })) {
+      const list = [...messages, { role: 'user', content: text }]
+      setMessages(list); setInput(''); setImgBusy(true)
+      let verdict = null
+      try {
+        const ac = new AbortController(); const to = setTimeout(() => ac.abort(), 5000)
+        verdict = await postJson('/api/intent', { text, lastImagePrompt: afterImage ? (lastImg.genPrompt || '') : '' }, ac.signal)
+        clearTimeout(to)
+      } catch {}
+      setImgBusy(false)
+      if (verdict?.image) return generateImage(verdict.prompt || text, list, true)
+      return sendFromMessages(list)
     }
     speakerRef.current?.stop(); setSpeakingIdx(null)
     const imgs = attachments

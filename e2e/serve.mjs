@@ -13,6 +13,7 @@ http.createServer((req, res) => {
     let i = 0; const t = setInterval(() => { if (i >= txt.length) { clearInterval(t); return res.end() } res.write(JSON.stringify({ t: 'c', v: txt.slice(i, i + 12) }) + '\n'); i += 12 }, 30); return
   }
   if (u.pathname === '/api/image') { res.setHeader('content-type', 'application/json'); return res.end(JSON.stringify({ image: 'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEASABIAAD/2wBDAP//////////////////////////////////////////////////////////////////////////////////////wgALCAABAAEBAREA/8QAFBABAAAAAAAAAAAAAAAAAAAAAP/aAAgBAQABPxA=', prompt: 'a lion' })) }
+  if (u.pathname === '/api/intent') { let b = ''; req.on('data', c => b += c); req.on('end', () => { const t = JSON.parse(b || '{}').text || ''; res.setHeader('content-type', 'application/json'); res.end(JSON.stringify(/voir/.test(t) ? { image: true, prompt: 'a lion' } : { image: false, prompt: '' })) }); return }
   if (u.pathname.startsWith('/api/')) { res.statusCode = 404; return res.end('{}') }
   let f = path.join(root, u.pathname === '/' ? 'index.html' : u.pathname)
   if (!fs.existsSync(f) || fs.statSync(f).isDirectory()) f = path.join(root, 'index.html')

@@ -12,6 +12,10 @@ describe('detectImageIntent : demandes d\'image', () => {
     'make a poster for a jazz night',
     'montre-moi une image de la ville de Lomé la nuit',
     'draw a cat wearing a hat',
+    "genere l'image d'une femme enceinte",
+    "génère-moi l'image d'un chat",
+    "crée l'illustration d'un lion",
+    "je veux l'image d'une maison moderne",
   ])('%s', t => expect(d(t)).toBeTruthy())
 })
 
